@@ -46,3 +46,5 @@ apps/api/node_modules/.prisma
 
 # Turbo
 .turbo
+
+.vercel

@@ -11,7 +11,7 @@
 [![pnpm](https://img.shields.io/badge/pnpm-workspaces-F69220?style=flat-square&logo=pnpm&logoColor=white)](https://pnpm.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-22C55E?style=flat-square)](LICENSE)
 
-[**Live Demo**](#) · [**Report Bug**](https://github.com/ransayada/AIHQ/issues) · [**Request Feature**](https://github.com/ransayada/AIHQ/issues)
+[**Live Demo**](https://aihq-pi.vercel.app) · [**Report Bug**](https://github.com/ransayada/AIHQ/issues) · [**Request Feature**](https://github.com/ransayada/AIHQ/issues)
 
 </div>
 
