@@ -1,0 +1,16 @@
+export { audioEngine, AudioEngine } from "./engine/AudioEngine";
+export { ensureTrackRegistered, cleanupTrack, getSynthInstrument, getEffectsChain } from "./engine/TrackManager";
+export { TransportEngine } from "./engine/TransportEngine";
+export { Sequencer } from "./sequencer/Sequencer";
+export { MixerEngine, AudioChannel } from "./mixer/MixerEngine";
+export { PolySynthInstrument } from "./instruments/PolySynth";
+export { DrumMachine } from "./instruments/DrumMachine";
+export { SynthDrumKit } from "./instruments/SynthDrumKit";
+export { EffectsChain } from "./effects/EffectsChain";
+export { MagentaEngine } from "./ai/MagentaEngine";
+export * from "./utils/midiUtils";
+export * from "./utils/timeUtils";
+export type { TransportState, PositionChangeCallback } from "./engine/TransportEngine";
+export type { ChannelConfig } from "./mixer/MixerEngine";
+export type { GeneratedDrumPattern, GeneratedMelody } from "./ai/MagentaEngine";
+export type { EffectSlot } from "./effects/EffectsChain";

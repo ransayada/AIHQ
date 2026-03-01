@@ -1,0 +1,104 @@
+@theme {
+  /* ── AIHQ Dark Studio Theme ─────────────────────────────────────────── */
+
+  /* Background layers (darkest → lightest) */
+  --color-studio-950: #070709;
+  --color-studio-900: #0d0d0f;
+  --color-studio-800: #111115;
+  --color-studio-700: #17171d;
+  --color-studio-600: #1e1e27;
+  --color-studio-500: #26262f;
+  --color-studio-400: #32323d;
+  --color-studio-300: #44444f;
+  --color-studio-200: #7a7a8a;
+  --color-studio-100: #aaaabb;
+  --color-studio-50: #d4d4e0;
+
+  /* Accent palette */
+  --color-accent-purple: #7c4dff;
+  --color-accent-purple-dim: #5533bb;
+  --color-accent-cyan: #00d4ff;
+  --color-accent-cyan-dim: #0099bb;
+  --color-accent-green: #00e676;
+  --color-accent-green-dim: #00aa55;
+  --color-accent-orange: #ff6d00;
+  --color-accent-red: #ff1744;
+  --color-accent-yellow: #ffea00;
+  --color-accent-pink: #f50057;
+
+  /* Semantic DAW colors */
+  --color-playing: var(--color-accent-cyan);
+  --color-recording: var(--color-accent-red);
+  --color-armed: var(--color-accent-red);
+  --color-muted: var(--color-studio-300);
+  --color-soloed: var(--color-accent-yellow);
+  --color-selected: var(--color-accent-purple);
+
+  /* Typography */
+  --font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", ui-monospace, monospace;
+  --font-sans: "Inter", "DM Sans", system-ui, sans-serif;
+  --font-size-xxs: 0.625rem; /* 10px */
+
+  /* DAW Layout dimensions */
+  --daw-transport-height: 52px;
+  --daw-mixer-min-height: 180px;
+  --daw-sidebar-width: 240px;
+  --daw-ai-panel-width: 280px;
+  --daw-track-header-width: 200px;
+  --daw-track-height: 48px;
+  --daw-step-width: 32px;
+  --daw-piano-key-width: 56px;
+  --daw-timeline-height: 28px;
+
+  /* Animation */
+  --ease-snap: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+  /* Border radius tokens */
+  --radius-daw: 4px;
+  --radius-control: 3px;
+}
+
+/* ── Base Styles ────────────────────────────────────────────────────── */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--color-studio-900);
+    color: var(--color-studio-50);
+    font-family: var(--font-sans);
+    overflow: hidden; /* DAW is full-screen, no page scroll */
+  }
+
+  /* Monospace for all numeric DAW readouts */
+  .daw-readout {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.05em;
+  }
+
+  /* Custom scrollbar for DAW panels */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-studio-800);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-studio-400);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-studio-300);
+  }
+}

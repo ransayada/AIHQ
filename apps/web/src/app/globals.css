@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+/* Tell Tailwind v4 where to scan for classes in the monorepo */
+@source "../";
+@source "../../../../packages/ui/src";
+
+@import "@aihq/ui/styles";
+
+/* Additional app-level overrides */
+@layer base {
+  :root {
+    --radius: 0.25rem;
+  }
+}

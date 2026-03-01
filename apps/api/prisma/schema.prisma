@@ -1,0 +1,117 @@
+// AIHQ Prisma Schema
+// Database: PostgreSQL (Railway)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Tier {
+  FREE
+  PRO
+  STUDIO
+}
+
+model User {
+  id          String   @id @default(cuid())
+  clerkId     String   @unique
+  email       String   @unique
+  displayName String?
+  avatarUrl   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  subscription Subscription?
+  projects     Project[]
+  samples      Sample[]
+  aiGenerations AiGeneration[]
+
+  @@index([clerkId])
+  @@map("users")
+}
+
+model Subscription {
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  stripeCustomerId     String    @unique
+  stripeSubscriptionId String?   @unique
+  stripePriceId        String?
+  tier                 Tier      @default(FREE)
+  status               String    @default("active") // active, cancelled, past_due
+  currentPeriodEnd     DateTime?
+  aiGenerationsUsed    Int       @default(0)
+  aiGenerationsReset   DateTime  @default(now())
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+model Project {
+  id           String   @id @default(cuid())
+  userId       String
+  name         String
+  description  String?
+  bpm          Int      @default(120)
+  key          String   @default("C")
+  scale        String   @default("major")
+  data         Json // Full serialized DAW state (ProjectData schema)
+  thumbnailUrl String?
+  isPublic     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  lastOpenedAt DateTime @default(now())
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  samples Sample[] @relation("ProjectSamples")
+
+  @@index([userId])
+  @@index([userId, updatedAt])
+  @@map("projects")
+}
+
+model Sample {
+  id           String   @id @default(cuid())
+  userId       String
+  name         String
+  fileName     String
+  mimeType     String
+  fileSize     Int // bytes
+  duration     Float? // seconds
+  sampleRate   Int?
+  storageKey   String // Cloudflare R2 object key
+  waveformData Json? // Pre-computed waveform peaks for display
+  tags         String[]
+  isPublic     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projects Project[] @relation("ProjectSamples")
+
+  @@unique([userId, storageKey])
+  @@index([userId])
+  @@map("samples")
+}
+
+model AiGeneration {
+  id         String   @id @default(cuid())
+  userId     String
+  type       String // "drum_pattern" | "melody" | "chat"
+  prompt     String?
+  tokensUsed Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@map("ai_generations")
+}
