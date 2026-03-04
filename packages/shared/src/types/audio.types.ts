@@ -29,15 +29,22 @@ export interface DrumPadConfig {
 }
 
 export const DEFAULT_DRUM_PADS: DrumPadConfig[] = [
-  { index: 0, name: "Kick", midiNote: 36, color: "#ff4757" },
-  { index: 1, name: "Snare", midiNote: 38, color: "#ff6b81" },
-  { index: 2, name: "Hi-Hat Closed", midiNote: 42, color: "#ffa502" },
-  { index: 3, name: "Hi-Hat Open", midiNote: 46, color: "#ff7f50" },
-  { index: 4, name: "Tom 1", midiNote: 45, color: "#2ed573" },
-  { index: 5, name: "Tom 2", midiNote: 47, color: "#1e90ff" },
-  { index: 6, name: "Crash", midiNote: 49, color: "#a29bfe" },
-  { index: 7, name: "Ride", midiNote: 51, color: "#fd79a8" },
-  { index: 8, name: "Clap", midiNote: 39, color: "#fdcb6e" },
+  { index: 0,  name: "Kick",         midiNote: 36, color: "#ff4757" },
+  { index: 1,  name: "Snare",        midiNote: 38, color: "#ff6b81" },
+  { index: 2,  name: "HH Closed",    midiNote: 42, color: "#ffa502" },
+  { index: 3,  name: "HH Open",      midiNote: 46, color: "#ff7f50" },
+  { index: 4,  name: "Tom 1",        midiNote: 45, color: "#2ed573" },
+  { index: 5,  name: "Tom 2",        midiNote: 47, color: "#1e90ff" },
+  { index: 6,  name: "Crash",        midiNote: 49, color: "#a29bfe" },
+  { index: 7,  name: "Ride",         midiNote: 51, color: "#fd79a8" },
+  { index: 8,  name: "Clap",         midiNote: 39, color: "#fdcb6e" },
+  { index: 9,  name: "808 Kick",     midiNote: 35, color: "#c0392b" },
+  { index: 10, name: "Rim",          midiNote: 37, color: "#e67e22" },
+  { index: 11, name: "Shaker",       midiNote: 70, color: "#f1c40f" },
+  { index: 12, name: "Tom Hi",       midiNote: 50, color: "#27ae60" },
+  { index: 13, name: "HH Pedal",     midiNote: 44, color: "#2980b9" },
+  { index: 14, name: "Stab",         midiNote: 55, color: "#8e44ad" },
+  { index: 15, name: "Cowbell",      midiNote: 56, color: "#e91e8c" },
 ];
 
 export type NoteOnCallback = (pitch: number, velocity: number, time: number) => void;

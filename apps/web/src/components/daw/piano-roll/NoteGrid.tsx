@@ -110,7 +110,7 @@ export function NoteGrid({
   const notes = useTracksStore(
     (s) => s.tracks.find((t) => t.id === trackId)?.clips.find((c) => c.id === clipId)?.notes ?? []
   );
-  const { addNote, removeNote } = useTracksStore();
+  const { addNote, removeNote, updateNote } = useTracksStore();
 
   // Resize observer to handle canvas sizing
   React.useEffect(() => {
@@ -199,17 +199,17 @@ export function NoteGrid({
           noteId: existingNote.id,
           startBeat: beat,
           startPitch: pitch,
-          originalNote: existingNote,
+          originalNote: { ...existingNote },
         };
       } else {
         isDrawing.current = true;
-        addNote(trackId, clipId, {
+        const newNoteId = addNote(trackId, clipId, {
           pitch,
           velocity: 100,
           startBeat: beat,
           durationBeats: 4 / quantizeDivision,
         });
-        dragState.current = { mode: "create", startBeat: beat, startPitch: pitch };
+        dragState.current = { mode: "create", noteId: newNoteId, startBeat: beat, startPitch: pitch };
       }
     },
     [
@@ -221,6 +221,29 @@ export function NoteGrid({
       clipId,
       quantizeDivision,
     ]
+  );
+
+  const handlePointerMove = React.useCallback(
+    (e: React.PointerEvent<HTMLCanvasElement>) => {
+      if (!dragState.current) return;
+      const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
+      const { beat, pitch } = canvasToMusical(e.clientX, e.clientY, rect);
+      const ds = dragState.current;
+      const gridSize = 4 / quantizeDivision;
+
+      if (ds.mode === "move" && ds.noteId && ds.originalNote) {
+        const deltaBeat = beat - ds.startBeat;
+        const deltaPitch = pitch - ds.startPitch;
+        updateNote(trackId, clipId, ds.noteId, {
+          startBeat: Math.max(0, ds.originalNote.startBeat + deltaBeat),
+          pitch: Math.max(0, Math.min(127, ds.originalNote.pitch + deltaPitch)),
+        });
+      } else if (ds.mode === "create" && ds.noteId) {
+        const duration = Math.max(gridSize, beat - ds.startBeat + gridSize);
+        updateNote(trackId, clipId, ds.noteId, { durationBeats: duration });
+      }
+    },
+    [canvasToMusical, updateNote, trackId, clipId, quantizeDivision]
   );
 
   const handlePointerUp = React.useCallback(() => {
@@ -235,6 +258,7 @@ export function NoteGrid({
         className="absolute inset-0 w-full h-full cursor-crosshair"
         style={{ touchAction: "none" }}
         onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onContextMenu={(e) => e.preventDefault()}
       />

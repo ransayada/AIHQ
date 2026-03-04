@@ -38,7 +38,11 @@ export class PolySynthInstrument {
 
   applyPreset(preset: SynthPreset): void {
     this.synth.set({
-      oscillator: { type: preset.oscillator.type },
+      oscillator: {
+        type: preset.oscillator.type,
+        detune: preset.oscillator.detune ?? 0,
+        count: preset.oscillator.count ?? 1,
+      },
       envelope: {
         attack: preset.envelope.attack,
         decay: preset.envelope.decay,

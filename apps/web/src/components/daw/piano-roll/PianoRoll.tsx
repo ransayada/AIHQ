@@ -3,7 +3,7 @@
 import * as React from "react";
 import { NoteGrid } from "./NoteGrid";
 import { useTracksStore } from "@/stores/tracksStore";
-import { noteNumberToName, isBlackKey } from "@aihq/audio-engine";
+import { audioEngine, noteNumberToName, isBlackKey, getSynthInstrument, ensureTrackRegistered } from "@aihq/audio-engine";
 import { cn } from "@aihq/ui";
 
 const PIXELS_PER_BEAT = 80;
@@ -12,7 +12,7 @@ const PIXELS_PER_SEMITONE = 14;
 const VISIBLE_BEATS = 16;
 const VISIBLE_SEMITONES = 88;
 
-function PianoKeys({ onNoteOn }: { onNoteOn: (pitch: number) => void }) {
+function PianoKeys({ onNoteOn }: { onNoteOn: (pitch: number) => Promise<void> | void }) {
   const keys = Array.from({ length: VISIBLE_SEMITONES }, (_, i) => i + 21); // A0 to C8
 
   return (
@@ -33,7 +33,9 @@ function PianoKeys({ onNoteOn }: { onNoteOn: (pitch: number) => void }) {
               "hover:bg-[var(--color-accent-purple)]"
             )}
             style={{ height: `${PIXELS_PER_SEMITONE}px` }}
-            onPointerDown={() => onNoteOn(midi)}
+            onPointerDown={() => {
+              void onNoteOn(midi);
+            }}
           >
             {isC && (
               <span className="text-[9px] text-[var(--color-studio-300)] font-mono">{name}</span>
@@ -52,9 +54,20 @@ export function PianoRoll() {
   const track = tracks.find((t) => t.id === selectedTrackId);
   const clip = track?.clips.find((c) => c.id === selectedClipId);
 
-  const handleNoteOn = (_pitch: number) => {
-    // Preview note via audio engine
-    // (wired to PolySynth in full implementation)
+  const handleNoteOn = async (pitch: number) => {
+    if (!track || track.type !== "synth") return;
+
+    // Ensure audio context is started (user gesture: piano key click)
+    await audioEngine.initialize();
+
+    // Ensure the instrument is registered — defensive fallback
+    ensureTrackRegistered(track, () => -1);
+
+    const inst = getSynthInstrument(track.id);
+    if (!inst) return;
+
+    // Short preview note
+    inst.noteOnOff(pitch, 110, "8n");
   };
 
   if (!track || !clip) {

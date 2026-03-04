@@ -21,6 +21,57 @@ const OSC_TYPES: SynthPreset["oscillator"]["type"][] = [
   "fatsawtooth",
 ];
 
+const EDM_PRESETS: Array<{ name: string; preset: SynthPreset }> = [
+  {
+    name: "Supersaw",
+    preset: {
+      oscillator: { type: "fatsawtooth", detune: 25, count: 7 },
+      envelope: { attack: 0.01, decay: 0.3, sustain: 0.6, release: 0.8 },
+      filter: { type: "lowpass", frequency: 8000, rolloff: -24, Q: 2, envelopeAmount: 0 },
+    },
+  },
+  {
+    name: "Sub Bass",
+    preset: {
+      oscillator: { type: "sine", detune: 0, count: 1 },
+      envelope: { attack: 0.005, decay: 0.1, sustain: 0.9, release: 0.3 },
+      filter: { type: "lowpass", frequency: 300, rolloff: -24, Q: 1, envelopeAmount: 0 },
+    },
+  },
+  {
+    name: "Pluck",
+    preset: {
+      oscillator: { type: "sawtooth", detune: 0, count: 1 },
+      envelope: { attack: 0.001, decay: 0.25, sustain: 0, release: 0.4 },
+      filter: { type: "lowpass", frequency: 3500, rolloff: -24, Q: 4, envelopeAmount: 0 },
+    },
+  },
+  {
+    name: "Pad",
+    preset: {
+      oscillator: { type: "fatsawtooth", detune: 15, count: 3 },
+      envelope: { attack: 0.5, decay: 0.5, sustain: 0.8, release: 1.5 },
+      filter: { type: "lowpass", frequency: 5000, rolloff: -12, Q: 1, envelopeAmount: 0 },
+    },
+  },
+  {
+    name: "Acid",
+    preset: {
+      oscillator: { type: "square", detune: 0, count: 1 },
+      envelope: { attack: 0.001, decay: 0.15, sustain: 0.3, release: 0.15 },
+      filter: { type: "bandpass", frequency: 1000, rolloff: -24, Q: 10, envelopeAmount: 0 },
+    },
+  },
+  {
+    name: "Bell",
+    preset: {
+      oscillator: { type: "triangle", detune: 0, count: 1 },
+      envelope: { attack: 0.001, decay: 0.8, sustain: 0, release: 1.2 },
+      filter: { type: "lowpass", frequency: 12000, rolloff: -12, Q: 1, envelopeAmount: 0 },
+    },
+  },
+];
+
 const FILTER_TYPES: SynthPreset["filter"]["type"][] = [
   "lowpass",
   "highpass",
@@ -172,6 +223,21 @@ export function SynthPanel() {
           <MiniPiano octave={octave} onNoteOn={handleNoteOn} onNoteOff={handleNoteOff} />
         </div>
       </div>
+
+      {/* EDM Presets */}
+      <Section title="Presets">
+        <div className="flex gap-1 flex-wrap">
+          {EDM_PRESETS.map((p) => (
+            <button
+              key={p.name}
+              onClick={() => update(p.preset)}
+              className="px-2.5 py-1 rounded text-[9px] font-semibold transition-colors border border-[var(--color-studio-600)] text-[var(--color-studio-300)] hover:text-white hover:border-[var(--color-accent-purple)] hover:bg-[var(--color-studio-700)]"
+            >
+              {p.name}
+            </button>
+          ))}
+        </div>
+      </Section>
 
       {/* Oscillator */}
       <Section title="Oscillator">
