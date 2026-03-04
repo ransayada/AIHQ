@@ -9,6 +9,7 @@
 [![Tone.js](https://img.shields.io/badge/Tone.js-15-FF6B6B?style=flat-square)](https://tonejs.github.io/)
 [![Turborepo](https://img.shields.io/badge/Turborepo-2.x-EF4444?style=flat-square&logo=turborepo&logoColor=white)](https://turbo.build/)
 [![pnpm](https://img.shields.io/badge/pnpm-workspaces-F69220?style=flat-square&logo=pnpm&logoColor=white)](https://pnpm.io/)
+[![Tests](https://img.shields.io/badge/tests-59%20unit%20%2B%2013%20E2E-22C55E?style=flat-square)](#-testing)
 [![License: MIT](https://img.shields.io/badge/License-MIT-22C55E?style=flat-square)](LICENSE)
 
 [**Live Demo**](https://aihq-pi.vercel.app) · [**Report Bug**](https://github.com/ransayada/AIHQ/issues) · [**Request Feature**](https://github.com/ransayada/AIHQ/issues)
@@ -22,13 +23,51 @@
 AIHQ is a fully browser-based Digital Audio Workstation (DAW) powered by the Web Audio API and AI-assisted music generation. No plugins, no downloads — just open it and make music.
 
 ```
-🎹  Piano Roll       — Draw and edit MIDI notes on a canvas-based grid
-🥁  Step Sequencer   — 16-step drum programming with synthesized sounds
+🎹  Piano Roll       — Draw, drag & resize MIDI notes on a canvas grid
+🥁  Step Sequencer   — 16-step drum programming with 16 synthesized EDM sounds
 🎛️  Mixer            — Per-track volume, pan, mute, and solo
-🎸  Synth Editor     — Oscillator, ADSR envelope, and filter controls
+🎸  Synth Editor     — Oscillator, ADSR envelope, filter + 6 EDM preset sounds
 🔊  Effects Rack     — Reverb, Delay, EQ, Compressor, Distortion per track
 🤖  AI Panel         — Magenta.js-powered drum pattern and melody generation
 ```
+
+---
+
+## 🎵 Sounds & Instruments
+
+### 16 Synthesized Drum Pads
+
+| Pad | Sound | Character |
+|-----|-------|-----------|
+| 0 | **Kick** | Standard 4/4 kick |
+| 1 | **Snare** | White noise snap |
+| 2 | **HH Closed** | Tight metallic hat |
+| 3 | **HH Open** | Long metallic hat |
+| 4 | **Tom 1** | Mid-low tom |
+| 5 | **Tom 2** | Low tom |
+| 6 | **Crash** | Wide cymbal crash |
+| 7 | **Ride** | Sustained ride bell |
+| 8 | **Clap** | EDM clap |
+| 9 | **808 Kick** | Long sub-bass sweep |
+| 10 | **Rim** | Snappy rimshot |
+| 11 | **Shaker** | High-frequency tick |
+| 12 | **Tom Hi** | Bright high tom |
+| 13 | **HH Pedal** | Ultra-short hat |
+| 14 | **Stab** | Bright metallic zap |
+| 15 | **Cowbell** | EDM cowbell |
+
+### 6 One-Click Synth Presets
+
+| Preset | Character |
+|--------|-----------|
+| **Supersaw** | 7-voice fat sawtooth — classic EDM lead |
+| **Sub Bass** | Pure sine, filtered low — deep rumble |
+| **Pluck** | Fast-decay sawtooth — percussive melodic |
+| **Pad** | Slow-attack fat saw — ambient wash |
+| **Acid** | Square + bandpass — 303-style bassline |
+| **Bell** | Triangle, long ring — melodic accent |
+
+All presets set the full oscillator, ADSR, and filter — tweak any knob after applying.
 
 ---
 
@@ -43,7 +82,7 @@ aihq/
 │   ├── audio-engine/ # Tone.js wrapper — instruments, sequencer, effects
 │   ├── shared/       # Zod schemas + TypeScript types (shared by all)
 │   └── ui/           # Design system — components + Tailwind v4 tokens
-├── e2e/              # Playwright end-to-end tests
+├── e2e/              # Playwright end-to-end tests (13 tests)
 ├── turbo.json        # Turborepo pipeline
 └── pnpm-workspace.yaml
 ```
@@ -92,15 +131,42 @@ Open **http://localhost:3000/studio/test** to launch the DAW.
 
 ## 🎛️ Using the DAW
 
+### Piano Roll
+
 | Action | How |
 |--------|-----|
-| **Add a drum track** | Click `+ Add drum track` in the Sequencer tab |
-| **Add a synth track** | Click `+` in the Session View |
-| **Toggle steps** | Click squares in the Step Sequencer |
-| **Edit synth** | Select a synth track → click **Synth** tab |
-| **Add effects** | Select any track → click **Effects** tab |
-| **Play / Stop** | `Space` or the ▶ button in the transport bar |
-| **Adjust BPM** | Scroll on the BPM display in the transport bar |
+| **Draw a note** | Left-click on empty space |
+| **Extend note length** | Click and drag right while drawing |
+| **Move a note** | Click and drag an existing note |
+| **Delete a note** | Right-click on a note |
+| **Preview a pitch** | Click a piano key on the left |
+| **Zoom** | Drag the Zoom slider in the toolbar |
+
+### Step Sequencer & Drums
+
+| Action | How |
+|--------|-----|
+| **Add a drum sound** | Click `+ Add drum track` — each track = one sound |
+| **Toggle a step** | Click a step button to on/off |
+| **Choose a sound** | Pad index = track position (1st track = Kick, 2nd = Snare…) |
+| **Mute a drum track** | Click the 🔊 icon next to the track name |
+
+### Synth Editor
+
+| Action | How |
+|--------|-----|
+| **Load a preset** | Click any preset button at the top (Supersaw, Sub Bass, etc.) |
+| **Change oscillator** | Click a waveform button (sine / triangle / sawtooth / square / fat saw) |
+| **Tune ADSR** | Drag the A / D / S / R knobs |
+| **Shape filter** | Set type, cutoff freq, Q, and envelope amount |
+| **Preview notes** | Click piano keys in the mini keyboard |
+
+### Transport
+
+| Action | How |
+|--------|-----|
+| **Play / Stop** | `Space` or the ▶ button |
+| **Adjust BPM** | Click the BPM display and type, or scroll the mouse wheel on it |
 
 ---
 
@@ -112,10 +178,20 @@ Open **http://localhost:3000/studio/test** to launch the DAW.
 pnpm build
 ```
 
-### Run tests
+### Run unit tests (59 tests)
 
 ```bash
 pnpm test
+```
+
+### Run E2E tests (13 tests — requires Chromium)
+
+```bash
+# Install browser once
+npx playwright install chromium
+
+# Run E2E tests (starts dev server automatically)
+cd e2e && npx playwright test
 ```
 
 ### Type checking
@@ -142,6 +218,26 @@ pnpm turbo dev --filter=@aihq/web
 
 ---
 
+## 🧪 Testing
+
+| Suite | Runner | Count | What it covers |
+|-------|--------|-------|----------------|
+| `@aihq/shared` | Vitest | 11 | Zod schema validation |
+| `@aihq/audio-engine` | Vitest | 38 | MIDI utils, Sequencer |
+| `@aihq/api` | Vitest | 3 | REST endpoints (Prisma mocked) |
+| `@aihq/web` | Vitest + RTL | 5 | Transport bar component |
+| `@aihq/ui` | Vitest | 2 | Panel component stories |
+| E2E | Playwright | 13 | Auth flows, studio navigation, transport |
+
+Run everything:
+
+```bash
+pnpm test          # unit tests
+cd e2e && npx playwright test  # E2E tests
+```
+
+---
+
 ## 🧩 Tech Stack
 
 ### Frontend (`apps/web`)
@@ -158,8 +254,8 @@ pnpm turbo dev --filter=@aihq/web
 | | |
 |--|--|
 | **Core** | Tone.js 15 (Web Audio API) |
-| **Drums** | Synthesized via MembraneSynth, NoiseSynth, MetalSynth |
-| **Synth** | PolySynth with full ADSR + filter |
+| **Drums** | 16 synthesized pads via MembraneSynth, NoiseSynth, MetalSynth |
+| **Synth** | PolySynth with full ADSR + filter + 6 EDM presets |
 | **Effects** | Reverb, FeedbackDelay, EQ3, Compressor, Distortion |
 | **Signal chain** | Instrument → EffectsChain → Mixer → Destination |
 | **AI** | Magenta.js MusicRNN for pattern generation |
@@ -219,24 +315,26 @@ The web app is pre-configured for Vercel deployment.
 
 ```bash
 npm i -g vercel
-cd apps/web
-vercel --prod
+vercel --prod   # run from monorepo root
 ```
 
-Vercel will auto-detect Next.js. The `apps/web/vercel.json` already configures:
+Vercel auto-detects Next.js. The root `vercel.json` configures:
+- Root directory: `apps/web`
 - Build command: `pnpm turbo build --filter=@aihq/web`
-- COOP/COEP headers (required for Web Audio SharedArrayBuffer)
+- COOP/COEP headers (required for Web Audio `SharedArrayBuffer`)
 
 ---
 
 ## 🗺️ Roadmap
 
-- [x] Step Sequencer with synthesized drums
+- [x] Step Sequencer with 16 synthesized EDM drum sounds
 - [x] Polyphonic synthesizer with ADSR + filter
+- [x] 6 one-click EDM synth presets (Supersaw, Sub Bass, Pluck, Pad, Acid, Bell)
 - [x] Effects rack (Reverb, Delay, EQ, Compressor, Distortion)
 - [x] Mixer with volume, pan, mute, solo
-- [x] Piano Roll (canvas-based)
+- [x] Piano Roll with drag & drop note editing
 - [x] AI panel (Magenta.js integration)
+- [x] 59 unit tests + 13 Playwright E2E tests
 - [ ] Audio sample import & playback
 - [ ] Export to WAV / MP3
 - [ ] Project save/load to cloud

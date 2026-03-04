@@ -1,5 +1,8 @@
 import { vi } from "vitest";
 
+// Ensure tests use the real Prisma path (not in-memory fallback)
+process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/test";
+
 // Mock Prisma
 vi.mock("../db/client", () => ({
   prisma: {
