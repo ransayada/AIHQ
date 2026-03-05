@@ -8,6 +8,7 @@ import {
   cleanupTrack,
   getSynthInstrument,
   getEffectsChain,
+  syncSynthClips,
 } from "@aihq/audio-engine";
 import { useTracksStore } from "@/stores/tracksStore";
 
@@ -31,10 +32,10 @@ export function useAudioSync(): void {
     useTracksStore.getState().tracks.forEach((t) => ensureTrackRegistered(t, resolveDrumPadIndex));
 
     const unsub = useTracksStore.subscribe((state, prevState) => {
-      // Build an O(1) lookup map from previous state — avoids O(N²) find() inside forEach()
+      // Build an O(1) lookup map from previous state
       const prevTrackMap = new Map(prevState.tracks.map((t) => [t.id, t]));
 
-      // Register only newly added tracks (not every track on every update)
+      // Register only newly added tracks
       state.tracks.forEach((t) => {
         if (!prevTrackMap.has(t.id)) {
           ensureTrackRegistered(t, resolveDrumPadIndex);
@@ -47,20 +48,23 @@ export function useAudioSync(): void {
         if (!ch) return;
         const prev = prevTrackMap.get(track.id);
         if (!prev) return;
+
         if (prev.volume !== track.volume) ch.setVolume(track.volume);
         if (prev.pan !== track.pan) ch.setPan(track.pan);
         if (prev.muted !== track.muted) ch.setMuted(track.muted);
         if (prev.soloed !== track.soloed) audioEngine.mixer.setSolo(track.id, track.soloed);
 
-        // Sync synth preset changes
-        if (
-          track.type === "synth" &&
-          track.synthPreset &&
-          prev.synthPreset !== track.synthPreset
-        ) {
-          const inst = getSynthInstrument(track.id);
-          if (inst instanceof PolySynthInstrument) {
-            inst.applyPreset(track.synthPreset);
+        if (track.type === "synth") {
+          // Sync preset changes
+          if (track.synthPreset && prev.synthPreset !== track.synthPreset) {
+            const inst = getSynthInstrument(track.id);
+            if (inst instanceof PolySynthInstrument) {
+              inst.applyPreset(track.synthPreset);
+            }
+          }
+          // Re-schedule Tone.Part whenever notes/clips change (Immer creates new ref on any mutation)
+          if (prev.clips !== track.clips) {
+            syncSynthClips(track);
           }
         }
       });

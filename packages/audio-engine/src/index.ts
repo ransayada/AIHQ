@@ -1,5 +1,5 @@
 export { audioEngine, AudioEngine } from "./engine/AudioEngine";
-export { ensureTrackRegistered, cleanupTrack, getSynthInstrument, getEffectsChain } from "./engine/TrackManager";
+export { ensureTrackRegistered, cleanupTrack, getSynthInstrument, getEffectsChain, syncSynthClips } from "./engine/TrackManager";
 export { TransportEngine } from "./engine/TransportEngine";
 export { Sequencer } from "./sequencer/Sequencer";
 export { MixerEngine, AudioChannel } from "./mixer/MixerEngine";

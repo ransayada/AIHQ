@@ -12,6 +12,7 @@ interface NoteGridProps {
   pixelsPerSemitone: number;
   beatsVisible: number;
   quantizeDivision?: number; // 4=quarter, 8=8th, 16=16th, 32=32nd
+  recordCursorBeat?: number; // When set, draws a step-record cursor line
   className?: string;
 }
 
@@ -94,6 +95,7 @@ export function NoteGrid({
   pixelsPerSemitone,
   beatsVisible,
   quantizeDivision = 16,
+  recordCursorBeat,
   className,
 }: NoteGridProps) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
@@ -145,7 +147,20 @@ export function NoteGrid({
 
     drawGrid(ctx, width, height, pixelsPerBeat, pixelsPerSemitone, beatsVisible);
     drawNotes(ctx, notes, height, pixelsPerBeat, pixelsPerSemitone);
-  }, [notes, pixelsPerBeat, pixelsPerSemitone, beatsVisible]);
+
+    // Step-record cursor — vertical cyan dashed line
+    if (recordCursorBeat !== undefined) {
+      const x = recordCursorBeat * pixelsPerBeat;
+      ctx.strokeStyle = "#00d4ff";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }, [notes, pixelsPerBeat, pixelsPerSemitone, beatsVisible, recordCursorBeat]);
 
   // Convert canvas coordinates to musical values
   const canvasToMusical = React.useCallback(
