@@ -11,7 +11,7 @@ const PIXELS_PER_BAR = 80;
 const TRACK_HEIGHT = 48;
 
 export function SessionView() {
-  const { tracks, selectedTrackId, selectedClipId, selectTrack, selectClip, addTrack, addClip } =
+  const { tracks, selectedTrackId, selectedClipId, selectTrack, selectClip, addTrack, addClip, updateClip } =
     useTracksStore();
   const { setBottomPanel } = useUIStore();
 
@@ -62,7 +62,7 @@ export function SessionView() {
               )}
               style={{ width: PIXELS_PER_BAR, height: 24 }}
             >
-              {i % 4 === 0 ? i + 1 : ""}
+              {i + 1}
             </div>
           ))}
         </div>
@@ -128,7 +128,27 @@ export function SessionView() {
               </div>
 
               {/* Clip area */}
-              <div className="flex-1 relative overflow-hidden">
+              <div
+                className="flex-1 relative overflow-hidden bg-[var(--color-studio-800)] bg-opacity-30"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  try {
+                    const data = JSON.parse(e.dataTransfer.getData("application/json"));
+                    // calculate relative drop location
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const beats = Math.floor(x / (PIXELS_PER_BAR / 4));
+
+                    if (data.trackId === track.id) {
+                      updateClip(track.id, data.clipId, { startBeat: Math.max(0, beats) });
+                    }
+                  } catch (err) { }
+                }}
+              >
                 {track.clips.map((clip) => {
                   const left = clip.startBeat * (PIXELS_PER_BAR / 4);
                   const width = clip.lengthBeats * (PIXELS_PER_BAR / 4);
@@ -137,6 +157,14 @@ export function SessionView() {
                   return (
                     <div
                       key={clip.id}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData(
+                          "application/json",
+                          JSON.stringify({ trackId: track.id, clipId: clip.id, startBeat: clip.startBeat })
+                        );
+                        e.dataTransfer.effectAllowed = "move";
+                      }}
                       className={cn(
                         "absolute top-1 bottom-1 rounded cursor-pointer transition-all",
                         isSelected ? "ring-1 ring-white" : "hover:brightness-110"

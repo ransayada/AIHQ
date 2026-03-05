@@ -252,7 +252,11 @@ export function NoteGrid({
   }, []);
 
   return (
-    <div ref={containerRef} className={`relative ${className ?? "w-full h-full"}`}>
+    <div
+      ref={containerRef}
+      className={`relative ${className ?? "h-full"}`}
+      style={{ width: `${beatsVisible * pixelsPerBeat}px` }}
+    >
       <canvas
         ref={canvasRef}
         className="absolute inset-0 w-full h-full cursor-crosshair"

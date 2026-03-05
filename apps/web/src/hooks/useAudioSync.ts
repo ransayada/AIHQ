@@ -31,14 +31,21 @@ export function useAudioSync(): void {
     useTracksStore.getState().tracks.forEach((t) => ensureTrackRegistered(t, resolveDrumPadIndex));
 
     const unsub = useTracksStore.subscribe((state, prevState) => {
-      // Register new tracks
-      state.tracks.forEach((t) => ensureTrackRegistered(t, resolveDrumPadIndex));
+      // Build an O(1) lookup map from previous state — avoids O(N²) find() inside forEach()
+      const prevTrackMap = new Map(prevState.tracks.map((t) => [t.id, t]));
 
-      // Sync mixer changes (volume, pan, mute) for all tracks
+      // Register only newly added tracks (not every track on every update)
+      state.tracks.forEach((t) => {
+        if (!prevTrackMap.has(t.id)) {
+          ensureTrackRegistered(t, resolveDrumPadIndex);
+        }
+      });
+
+      // Sync mixer / synth changes for existing tracks
       state.tracks.forEach((track) => {
         const ch = audioEngine.mixer.getChannel(track.id);
         if (!ch) return;
-        const prev = prevState.tracks.find((t) => t.id === track.id);
+        const prev = prevTrackMap.get(track.id);
         if (!prev) return;
         if (prev.volume !== track.volume) ch.setVolume(track.volume);
         if (prev.pan !== track.pan) ch.setPan(track.pan);

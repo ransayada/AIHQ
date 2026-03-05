@@ -7,7 +7,7 @@ interface StepButtonProps {
   isActive: boolean;
   isCurrentStep: boolean;
   step: number;
-  onClick: () => void;
+  onToggle: (step: number) => void;
   onContextMenu?: (e: React.MouseEvent) => void;
   color?: string;
 }
@@ -20,7 +20,7 @@ export const StepButton = React.memo(function StepButton({
   isActive,
   isCurrentStep,
   step,
-  onClick,
+  onToggle,
   onContextMenu,
   color = "var(--color-accent-purple)",
 }: StepButtonProps) {
@@ -30,7 +30,7 @@ export const StepButton = React.memo(function StepButton({
 
   return (
     <button
-      onClick={onClick}
+      onClick={() => onToggle(step)}
       onContextMenu={onContextMenu}
       className={cn(
         "relative w-8 h-7 rounded-sm border transition-none outline-none",
