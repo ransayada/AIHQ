@@ -1,5 +1,15 @@
 import path from "path";
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
+
+const ANALYZE = process.env.ANALYZE === "true";
+
+// Bundle-analyzer: only active when ANALYZE=true
+async function getBundleAnalyzer() {
+  if (!ANALYZE) return (c: NextConfig) => c;
+  const { default: BundleAnalyzer } = await import("@next/bundle-analyzer");
+  return BundleAnalyzer({ enabled: true });
+}
 
 const nextConfig: NextConfig = {
   // Pin file-tracing root to the monorepo root (avoids picking up C:\Users\RS\package-lock.json)
@@ -47,4 +57,18 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Apply bundle-analyzer then Sentry
+export default (async () => {
+  const withBundleAnalyzer = await getBundleAnalyzer();
+  const analyzed = withBundleAnalyzer(nextConfig);
+
+  return withSentryConfig(analyzed, {
+    // Sentry org + project read from environment (SENTRY_ORG, SENTRY_PROJECT)
+    silent: !process.env.CI,    // only print in CI
+    disableLogger: true,        // trim Sentry logger from client bundle
+    sourcemaps: {
+      disable: false,           // upload source maps to Sentry
+    },
+    automaticVercelMonitors: true,
+  });
+})();

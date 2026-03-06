@@ -24,12 +24,24 @@ export const StepButton = React.memo(function StepButton({
   onContextMenu,
   color = "var(--color-accent-purple)",
 }: StepButtonProps) {
-  // Group steps visually: dim every 4th boundary
   const isBarStart = step % 4 === 0;
   const isHalfStep = step % 2 !== 0;
 
+  // Flash animation key — increments each time this active step is triggered
+  const [flashKey, setFlashKey] = React.useState(0);
+  const prevFiring = React.useRef(false);
+  const isFiring   = isActive && isCurrentStep;
+
+  if (isFiring && !prevFiring.current) {
+    prevFiring.current = true;
+    setFlashKey((k) => k + 1);
+  } else if (!isFiring) {
+    prevFiring.current = false;
+  }
+
   return (
     <button
+      key={flashKey > 0 ? `f${flashKey}` : undefined}
       onClick={() => onToggle(step)}
       onContextMenu={onContextMenu}
       className={cn(
@@ -41,14 +53,15 @@ export const StepButton = React.memo(function StepButton({
           ? "border-[var(--color-studio-400)] bg-[var(--color-studio-700)]"
           : "border-[var(--color-studio-500)] bg-[var(--color-studio-600)]",
         !isActive && "hover:bg-[var(--color-studio-500)]",
-        isHalfStep && !isActive && "opacity-70"
+        isHalfStep && !isActive && "opacity-70",
+        isFiring && "animate-step-flash",
       )}
       style={
         isActive
           ? {
-              backgroundColor: isCurrentStep ? "white" : color,
-              boxShadow: isCurrentStep
-                ? `0 0 8px white`
+              backgroundColor: isFiring ? "white" : color,
+              boxShadow: isFiring
+                ? `0 0 12px white, 0 0 4px ${color}`
                 : `0 0 6px ${color}88`,
             }
           : isCurrentStep

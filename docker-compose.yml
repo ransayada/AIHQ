@@ -1,0 +1,91 @@
+name: aihq
+
+services:
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       aihq
+      POSTGRES_USER:     aihq
+      POSTGRES_PASSWORD: aihq
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:     ["CMD", "pg_isready", "-U", "aihq"]
+      interval: 5s
+      timeout:  5s
+      retries:  10
+
+  # ── Redis ───────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test:     ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout:  5s
+      retries:  10
+
+  # ── Elasticsearch (optional — for log ingestion) ─────────────────────────
+  elasticsearch:
+    image: elasticsearch:8.17.0
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    healthcheck:
+      test:     ["CMD", "curl", "-sf", "http://localhost:9200/_cluster/health"]
+      interval: 10s
+      timeout:  10s
+      retries:  10
+    profiles:
+      - full  # only start with: docker compose --profile full up
+
+  # ── AIHQ API ────────────────────────────────────────────────────────────────
+  api:
+    build:
+      context:    .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV:              development
+      DATABASE_URL:          postgresql://aihq:aihq@postgres:5432/aihq
+      REDIS_URL:             redis://redis:6379
+      ALLOWED_ORIGINS:       http://localhost:3000
+      # Stub keys — replace with real values for local dev
+      CLERK_SECRET_KEY:      sk_test_placeholder
+      ANTHROPIC_API_KEY:     sk-ant-placeholder
+      STRIPE_SECRET_KEY:     sk_test_placeholder
+      STRIPE_WEBHOOK_SECRET: whsec_placeholder
+      SVIX_WEBHOOK_SECRET:   whsec_placeholder
+      AWS_REGION:            us-east-1
+      AWS_ACCESS_KEY_ID:     placeholder
+      AWS_SECRET_ACCESS_KEY: placeholder
+      AWS_S3_BUCKET:         aihq-dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:         ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      interval:     15s
+      timeout:      5s
+      start_period: 15s
+      retries:      5
+
+volumes:
+  pgdata:
+  esdata:

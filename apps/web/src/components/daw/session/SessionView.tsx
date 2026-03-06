@@ -31,6 +31,12 @@ export function SessionView() {
 
   const handleTrackClick = (trackId: string) => {
     selectTrack(trackId);
+    const track = tracks.find((t) => t.id === trackId);
+    if (track?.type === "drum") {
+      setBottomPanel("sequencer");
+    } else {
+      setBottomPanel("piano-roll");
+    }
   };
 
   const handleAddClip = (trackId: string) => {

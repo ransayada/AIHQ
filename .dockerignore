@@ -1,0 +1,40 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build output
+.next
+**/dist
+**/.turbo
+
+# Dev / test artifacts
+coverage
+playwright-report
+**/*.test.ts
+**/*.spec.ts
+**/*.stories.tsx
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Version control
+.git
+.gitignore
+
+# Editor
+.vscode
+.idea
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Docs
+confluence.txt

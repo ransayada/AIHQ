@@ -71,8 +71,8 @@ export function ChannelStrip({ track, isSelected, onClick }: ChannelStripProps) 
       <div className="flex items-end gap-1">
         <div className="w-1.5 h-24 bg-[var(--color-studio-500)] rounded-sm overflow-hidden flex flex-col justify-end">
           <div
-            className="w-full bg-[var(--color-accent-green)] transition-all"
-            style={{ height: `${((track.volume + 60) / 66) * 100}%` }}
+            className="w-full transition-all"
+            style={{ height: `${((track.volume + 60) / 66) * 100}%`, backgroundColor: track.color }}
           />
         </div>
         <Fader value={track.volume} onChange={handleVolume} />

@@ -3,10 +3,12 @@
 import { useEffect } from "react";
 import { useAudioEngine } from "./useAudioEngine";
 import { useUIStore } from "@/stores/uiStore";
+import { useTracksStore } from "@/stores/tracksStore";
 
 export function useKeyboardShortcuts() {
   const { play, stop, isPlaying } = useAudioEngine();
   const { setBottomPanel } = useUIStore();
+  const temporalStore = useTracksStore.temporal;
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -27,6 +29,24 @@ export function useKeyboardShortcuts() {
             stop();
           } else {
             void play();
+          }
+          break;
+
+        case "KeyZ":
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            if (e.shiftKey) {
+              temporalStore.getState().redo();
+            } else {
+              temporalStore.getState().undo();
+            }
+          }
+          break;
+
+        case "KeyY":
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            temporalStore.getState().redo();
           }
           break;
 
@@ -53,5 +73,5 @@ export function useKeyboardShortcuts() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [play, stop, isPlaying, setBottomPanel]);
+  }, [play, stop, isPlaying, setBottomPanel, temporalStore]);
 }

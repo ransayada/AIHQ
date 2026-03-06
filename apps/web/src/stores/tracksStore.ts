@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
+import { temporal } from "zundo";
 import { getTrackColor } from "@aihq/ui";
 import type { Track, MidiNote, Clip, SynthPreset, StepPattern } from "@aihq/shared";
 
@@ -26,6 +27,7 @@ interface TracksState {
 
   // Clips & notes
   addClip: (trackId: string, clip: Omit<Clip, "id">) => string;
+  updateClip: (trackId: string, clipId: string, updates: Partial<Clip>) => void;
   removeClip: (trackId: string, clipId: string) => void;
   addNote: (trackId: string, clipId: string, note: Omit<MidiNote, "id">) => string;
   removeNote: (trackId: string, clipId: string, noteId: string) => void;
@@ -46,6 +48,7 @@ interface TracksState {
 }
 
 export const useTracksStore = create<TracksState>()(
+  temporal(
   devtools(
     immer((set, _get) => ({
       tracks: [],
@@ -146,6 +149,14 @@ export const useTracksStore = create<TracksState>()(
           }
         });
         return clipId;
+      },
+
+      updateClip: (trackId, clipId, updates) => {
+        set((state) => {
+          const track = state.tracks.find((t) => t.id === trackId);
+          const clip = track?.clips.find((c) => c.id === clipId);
+          if (clip) Object.assign(clip, updates);
+        });
       },
 
       removeClip: (trackId, clipId) => {
@@ -251,5 +262,6 @@ export const useTracksStore = create<TracksState>()(
       },
     })),
     { name: "TracksStore" }
+  )
   )
 );
