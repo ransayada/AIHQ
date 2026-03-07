@@ -86,4 +86,63 @@ describe("Projects API", () => {
       expect(res.status).toBe(400);
     });
   });
+
+  describe("PATCH /api/projects/:id", () => {
+    it("renames a project", async () => {
+      const existing = {
+        id: "proj-rename",
+        name: "New Name",
+        updatedAt: new Date(),
+      };
+
+      vi.mocked(prisma.project.findFirst).mockResolvedValueOnce({
+        id: "proj-rename",
+        name: "Old Name",
+        userId: "user-test-123",
+      } as never);
+      vi.mocked(prisma.project.update).mockResolvedValueOnce(existing as never);
+
+      const app = createApp();
+      const res = await app.request("/api/projects/proj-rename", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "New Name" }),
+      });
+
+      expect(res.status).toBe(200);
+      const body = await res.json() as { data: { project: { name: string } } };
+      expect(body.data.project.name).toBe("New Name");
+    });
+
+    it("rejects empty name on rename", async () => {
+      const app = createApp();
+      const res = await app.request("/api/projects/proj-1", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "" }),
+      });
+
+      expect(res.status).toBe(400);
+    });
+  });
+
+  describe("DELETE /api/projects/:id", () => {
+    it("deletes a project", async () => {
+      vi.mocked(prisma.project.findFirst).mockResolvedValueOnce({
+        id: "proj-del",
+        name: "Doomed",
+        userId: "user-test-123",
+      } as never);
+      vi.mocked(prisma.project.delete).mockResolvedValueOnce({} as never);
+
+      const app = createApp();
+      const res = await app.request("/api/projects/proj-del", {
+        method: "DELETE",
+      });
+
+      expect(res.status).toBe(200);
+      const body = await res.json() as { data: { success: boolean } };
+      expect(body.data.success).toBe(true);
+    });
+  });
 });

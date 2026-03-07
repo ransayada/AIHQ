@@ -1,8 +1,23 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { createWriteStream, existsSync, mkdirSync, unlinkSync } from "fs";
+import { join } from "path";
 import { prisma } from "../db/client";
 import { PLAN_LIMITS } from "@aihq/shared";
 import type { Tier } from "@prisma/client";
+import { log } from "../lib/logger";
+
+const hasDatabase = () => process.env.USE_MOCK_DB !== "true" && Boolean(process.env.DATABASE_URL);
+
+// ── Local dev mock store ───────────────────────────────────────────────────────
+interface LocalSample {
+  id: string; userId: string; name: string; fileName: string;
+  mimeType: string; fileSize: number; duration: number | null;
+  storageKey: string; createdAt: Date;
+}
+const localSamples = new Map<string, LocalSample>();
+const UPLOAD_DIR   = join(process.cwd(), "uploads");
+if (!existsSync(UPLOAD_DIR)) mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const s3 = new S3Client({
   region: "auto",
@@ -18,10 +33,40 @@ const PUBLIC_URL = process.env.R2_PUBLIC_URL ?? "";
 
 export const sampleService = {
   async listSamples(userId: string) {
+    if (!hasDatabase()) {
+      return Array.from(localSamples.values())
+        .filter((s) => s.userId === userId)
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    }
     return prisma.sample.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
     });
+  },
+
+  /** Direct upload for local dev (no S3 required). */
+  async uploadLocal(userId: string, name: string, fileName: string, mimeType: string, buffer: Buffer) {
+    const id  = "smp-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    const ext = fileName.split(".").pop() ?? "bin";
+    const key = `${userId}/${id}.${ext}`;
+    const path = join(UPLOAD_DIR, key.replace("/", "_"));
+    await new Promise<void>((res, rej) => {
+      const ws = createWriteStream(path);
+      ws.write(buffer, (err) => (err ? rej(err) : ws.end(res)));
+    });
+    const rec: LocalSample = {
+      id, userId, name, fileName, mimeType,
+      fileSize: buffer.length, duration: null,
+      storageKey: key, createdAt: new Date(),
+    };
+    localSamples.set(id, rec);
+    log.info("sampleService.uploadLocal", { id, name, size: buffer.length });
+    return { id, name, fileName, mimeType, fileSize: buffer.length, storageKey: key };
+  },
+
+  /** Serve a locally stored file. */
+  getLocalPath(storageKey: string): string {
+    return join(UPLOAD_DIR, storageKey.replace("/", "_"));
   },
 
   async getUploadUrl(

@@ -14,3 +14,10 @@ export type { TransportState, PositionChangeCallback } from "./engine/TransportE
 export type { ChannelConfig } from "./mixer/MixerEngine";
 export type { GeneratedDrumPattern, GeneratedMelody } from "./ai/MagentaEngine";
 export type { EffectSlot } from "./effects/EffectsChain";
+export { DJDeck }    from "./dj/DJDeck";
+export { DJEngine, djEngine } from "./dj/DJEngine";
+export type { DeckId } from "./dj/DJDeck";
+export { midiManager } from "./midi/MIDIManager";
+export type { MIDIDevice, MIDIMapping, MIDIStatus, MIDIManagerClass } from "./midi/MIDIManager";
+export { StemExporter } from "./export/StemExporter";
+export type { ExportFormat, ExportState, ExportProgress } from "./export/StemExporter";

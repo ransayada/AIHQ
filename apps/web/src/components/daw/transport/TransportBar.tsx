@@ -1,11 +1,13 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { Play, Square, Circle, Minus, Plus, Music } from "lucide-react";
 import { useTransportStore } from "@/stores/transportStore";
 import { useAudioEngine } from "@/hooks/useAudioEngine";
-import { cn } from "@aihq/ui";
+import { Avatar, cn } from "@aihq/ui";
 import { formatPosition } from "@aihq/audio-engine";
+import { Logo } from "@/components/layout/Logo";
 
 interface TransportBarProps {
   className?: string;
@@ -21,6 +23,7 @@ export function TransportBar({ className }: TransportBarProps) {
     position,
     timeSignatureNumerator,
     timeSignatureDenominator,
+    setRecording,
   } = useTransportStore();
 
   const [bpmInput, setBpmInput] = React.useState(String(bpm));
@@ -53,10 +56,8 @@ export function TransportBar({ className }: TransportBarProps) {
       )}
       data-testid="transport-bar"
     >
-      {/* Logo */}
-      <div className="font-bold text-sm tracking-widest text-[var(--color-accent-purple)] mr-2">
-        AIHQ
-      </div>
+      {/* Logo — links back to dashboard */}
+      <Logo href="/dashboard" size="sm" className="mr-2" />
 
       {/* Transport controls */}
       <div className="flex items-center gap-1">
@@ -77,13 +78,15 @@ export function TransportBar({ className }: TransportBarProps) {
 
         {/* Record */}
         <button
+          onClick={() => setRecording(!isRecording)}
           className={cn(
             "w-9 h-9 rounded flex items-center justify-center transition-all",
             isRecording
               ? "bg-[var(--color-accent-red)] text-white"
               : "bg-[var(--color-studio-600)] text-[var(--color-studio-100)] hover:bg-[var(--color-studio-500)]"
           )}
-          aria-label="Record"
+          aria-label={isRecording ? "Stop recording" : "Arm recording"}
+          aria-pressed={isRecording}
         >
           <Circle className="w-3.5 h-3.5 fill-current" />
         </button>
@@ -183,9 +186,18 @@ export function TransportBar({ className }: TransportBarProps) {
       {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Keyboard shortcut hint */}
-      <div className="text-[10px] text-[var(--color-studio-400)]">
-        <kbd className="px-1 rounded border border-[var(--color-studio-500)]">Space</kbd> Play/Stop
+      {/* Keyboard shortcut hint + user */}
+      <div className="flex items-center gap-4">
+        <div className="text-[10px] text-[var(--color-studio-400)]">
+          <kbd className="px-1 rounded border border-[var(--color-studio-500)]">Space</kbd> Play/Stop
+        </div>
+        <Link
+          href="/account"
+          className="flex items-center gap-2 hover:opacity-90 transition-opacity"
+        >
+          <Avatar name="Dev User" email="dev@aihq.local" size="xs" showStatus status="online" />
+          <span className="text-[11px] text-[var(--color-studio-300)]">Dev User</span>
+        </Link>
       </div>
     </div>
   );

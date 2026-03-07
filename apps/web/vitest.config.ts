@@ -6,7 +6,7 @@ import path from "path";
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react() as any],
   test: {
     globals: true,
     environment: "jsdom",

@@ -18,14 +18,38 @@ const nextConfig: NextConfig = {
   // Transpile monorepo workspace packages
   transpilePackages: ["@aihq/ui", "@aihq/shared", "@aihq/audio-engine"],
 
-  // Required for SharedArrayBuffer (Tone.js audio scheduling)
+  // Security + SharedArrayBuffer headers
   async headers() {
+    const csp = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://clerk.accounts.dev https://*.clerk.accounts.dev",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com",
+      "img-src 'self' data: blob: https:",
+      "media-src 'self' blob:",
+      "connect-src 'self' ws://localhost:3001 wss://localhost:3001 http://localhost:3001 https://api.anthropic.com https://clerk.accounts.dev https://*.clerk.accounts.dev https://o*.ingest.sentry.io",
+      "worker-src 'self' blob:",
+      "frame-ancestors 'none'",
+    ].join("; ");
+
     return [
       {
         source: "/:path*",
         headers: [
-          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-          { key: "Cross-Origin-Embedder-Policy", value: "require-corp" },
+          // SharedArrayBuffer (required by Tone.js scheduling)
+          { key: "Cross-Origin-Opener-Policy",   value: "same-origin" },
+          { key: "Cross-Origin-Embedder-Policy",  value: "require-corp" },
+          // Security hardening
+          { key: "X-Content-Type-Options",        value: "nosniff" },
+          { key: "X-Frame-Options",               value: "DENY" },
+          { key: "X-XSS-Protection",              value: "1; mode=block" },
+          { key: "Referrer-Policy",               value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy",            value: "microphone=(self), camera=(), geolocation=()" },
+          { key: "Strict-Transport-Security",     value: "max-age=31536000; includeSubDomains" },
+          // CSP — tightened for audio worklet + Clerk + Sentry
+          ...(process.env.NODE_ENV === "production"
+            ? [{ key: "Content-Security-Policy", value: csp }]
+            : []),
         ],
       },
     ];

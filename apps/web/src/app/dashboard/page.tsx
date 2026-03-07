@@ -5,15 +5,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Plus, Music, Clock, Trash2, Loader2, X, Check, Pencil } from "lucide-react";
 import { UserMenu } from "@/components/layout/UserMenu";
+import { Logo } from "@/components/layout/Logo";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { TemplateSelector } from "@/components/daw/templates/TemplateSelector";
-
-// Auth disabled — mock user for local dev
-const MOCK_USER = {
-  firstName: "Dev User",
-  email: "dev@aihq.local",
-  plan: "Studio",
-  storageLimitGb: 5,
-};
+import { useAuthStore } from "@/stores/authStore";
 
 type Project = {
   id: string;
@@ -267,9 +262,22 @@ function ProjectCard({
 }
 
 // ── Dashboard page ────────────────────────────────────────────────────────────
+const DEV_USER = { firstName: "Dev User", email: "dev@aihq.local", plan: "Studio", storageLimitGb: 5 };
+
 export default function DashboardPage() {
   const router = useRouter();
-  const user = MOCK_USER;
+  const storeUser = useAuthStore((s) => s.user);
+  const isSignedIn = useAuthStore((s) => s.isSignedIn);
+  const user = storeUser
+    ? { firstName: storeUser.firstName, email: storeUser.email, plan: storeUser.plan, storageLimitGb: 5 }
+    : DEV_USER;
+
+  useEffect(() => {
+    // Redirect to sign-in if not signed in and no dev user
+    if (!isSignedIn && typeof window !== "undefined" && !localStorage.getItem("aihq:dev-bypass")) {
+      // Allow access in dev for ease — comment this out to enforce auth
+    }
+  }, [isSignedIn, router]);
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
@@ -335,10 +343,11 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-[var(--color-studio-900)] text-white">
       {/* Nav */}
       <nav className="border-b border-[var(--color-studio-700)] px-6 h-14 flex items-center justify-between">
-        <div className="font-bold tracking-tight">
-          <span className="text-[var(--color-accent-purple)]">AI</span>HQ
+        <Logo size="sm" />
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <UserMenu name={user.firstName} email={user.email} plan={user.plan} />
         </div>
-        <UserMenu name={user.firstName} email={user.email} plan={user.plan} />
       </nav>
 
       <div className="max-w-6xl mx-auto px-6 py-8">
@@ -368,12 +377,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-baseline justify-between">
               <span className="text-sm font-semibold text-white">{user.plan}</span>
-              <Link
-                href="/pricing"
-                className="text-xs text-[var(--color-accent-cyan)] hover:text-[var(--color-accent-purple)] transition-colors"
-              >
-                Manage
-              </Link>
+              <span className="text-xs text-[var(--color-studio-400)]">Beta (Free)</span>
             </div>
             <p className="mt-2 text-xs text-[var(--color-studio-300)]">
               {projects.length} project{projects.length !== 1 ? "s" : ""} · unlimited storage

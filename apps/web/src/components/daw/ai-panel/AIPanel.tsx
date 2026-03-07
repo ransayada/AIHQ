@@ -15,7 +15,7 @@ export function AIPanel() {
   const [melodyTemp, setMelodyTemp] = React.useState(1.1);
 
   const { magentaLoaded, setMagentaLoaded, isGenerating, setGenerating } = useAIStore();
-  const { tracks, setPattern } = useTracksStore();
+  const { tracks, setPattern, addClip, addNote, selectTrack, selectClip } = useTracksStore();
   const loadMagenta = async () => {
     if (magentaLoaded || isLoadingMagenta) return;
     setIsLoadingMagenta(true);
@@ -64,8 +64,41 @@ export function AIPanel() {
 
     try {
       const melody = await audioEngine.magenta.generateMelody([60, 64, 67], melodyTemp);
-      // In full impl: load into piano roll
-      console.warn("Generated melody:", melody);
+      // Find first synth track to load the melody into
+      const synthTrack = tracks.find((t) => t.type === "synth");
+      if (!synthTrack) {
+        console.warn("Generate melody: no synth track available");
+      } else {
+        const totalBeats = melody.durations.reduce((sum, d) => sum + d, 0);
+        const clipLength = totalBeats > 0 ? totalBeats : 16;
+
+        const clipId = addClip(synthTrack.id, {
+          name: "AI Melody",
+          startBeat: 0,
+          lengthBeats: clipLength,
+          notes: [],
+        });
+
+        let cursorBeat = 0;
+        for (let i = 0; i < melody.pitches.length; i += 1) {
+          const pitch = melody.pitches[i] ?? 60;
+          const durationBeats = melody.durations[i] ?? 0.25;
+          const velocity = melody.velocities[i] ?? 100;
+
+          addNote(synthTrack.id, clipId, {
+            pitch,
+            velocity,
+            startBeat: cursorBeat,
+            durationBeats,
+          });
+
+          cursorBeat += durationBeats;
+        }
+
+        // Focus the new clip in the UI
+        selectTrack(synthTrack.id);
+        selectClip(clipId);
+      }
     } catch (err) {
       console.error("Melody generation error:", err);
     } finally {

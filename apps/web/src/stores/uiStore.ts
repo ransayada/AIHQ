@@ -3,7 +3,9 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 
-export type BottomPanel = "sequencer" | "piano-roll" | "mixer" | "synth" | "effects";
+export type BottomPanel =
+  | "sequencer" | "piano-roll" | "mixer" | "synth" | "effects" | "dj"
+  | "samples" | "midi" | "mastering" | "plugins" | "history";
 export type RightPanel = "samples" | "ai" | null;
 
 interface UIState {

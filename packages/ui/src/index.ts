@@ -4,4 +4,6 @@ export * from "./components/knob";
 export * from "./components/slider";
 export * from "./components/panel";
 export * from "./components/meter";
+export * from "./components/avatar";
 export * from "./tokens/colors";
+export * from "./components/dj-deck-card";

@@ -67,6 +67,28 @@ router.put(
   }
 );
 
+// PATCH /api/projects/:id — rename project
+router.patch(
+  "/:id",
+  zValidator("json", z.object({ name: z.string().min(1).max(100) })),
+  async (c) => {
+    const userId = c.get("dbUserId");
+    const { id } = c.req.param();
+    const { name } = c.req.valid("json");
+
+    try {
+      const project = await projectService.renameProject(userId, id, name);
+      return c.json({ data: { project } });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      if (message === "NOT_FOUND") {
+        return c.json({ error: { code: "NOT_FOUND", message: "Project not found" } }, 404);
+      }
+      throw err;
+    }
+  }
+);
+
 // DELETE /api/projects/:id
 router.delete("/:id", async (c) => {
   const userId = c.get("dbUserId");

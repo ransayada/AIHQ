@@ -1,0 +1,744 @@
+==============================================================================
+AIHQ — SOFTWARE ENGINEER CONFLUENCE GUIDE
+Version 1.1 | Updated: 2026-03-07
+==============================================================================
+
+This document is the definitive reference for engineers working on AIHQ — a
+full-featured, AI-powered browser-based Digital Audio Workstation (DAW) SaaS.
+
+------------------------------------------------------------------------------
+TABLE OF CONTENTS
+------------------------------------------------------------------------------
+ 1. Project Overview & Vision
+ 2. Technology Stack
+ 3. Repository Structure (Monorepo)
+ 4. Getting Started (Local Dev Setup)
+ 5. Architecture Deep-Dive
+ 6. Package Descriptions
+ 7. Frontend (Next.js App)
+ 8. Backend API (Hono)
+ 9. Audio Engine (Tone.js)
+10. State Management (Zustand)
+11. Authentication & Authorization
+12. Database Schema (Prisma)
+13. Key Features & Their Implementation
+14. API Reference (Swagger UI)
+15. Testing Strategy
+16. Logging & Observability (ELK Stack)
+17. CI/CD & Deployment
+18. Contributing Guidelines
+19. Common Pitfalls & Gotchas
+20. Roadmap & Future Work
+
+==============================================================================
+1. PROJECT OVERVIEW & VISION
+==============================================================================
+
+AIHQ is a SaaS Digital Audio Workstation that runs entirely in the browser.
+It combines professional-grade DAW features (step sequencer, piano roll,
+mixer, effects rack) with AI-powered tools (Claude AI assistant, Magenta.js
+pattern generation, AI mastering suggestions).
+
+Target users: electronic music producers, beatmakers, sound designers.
+Business model: Freemium (Free / Pro / Studio plans) with Stripe billing.
+
+Live URL: Deployed on Vercel (see README for URL)
+API URL: Deployed on Render/Fly.io
+
+==============================================================================
+2. TECHNOLOGY STACK
+==============================================================================
+
+Frontend:
+  - Next.js 15.5 (App Router, React 19, "use client" components)
+  - TypeScript 5.x (strict mode)
+  - Tailwind CSS v4 (utility-first, custom DAW color tokens)
+  - Zustand 5.x (state management — one store per domain)
+  - Radix UI (accessible primitives: Tabs, DropdownMenu, Dialog, Tooltip)
+  - Lucide React (icons)
+  - Tone.js 15.x (via @aihq/audio-engine — NEVER import directly in web)
+  - Light/Dark mode via data-theme attribute on <html> + CSS var overrides
+
+Backend:
+  - Hono v4 (ultra-fast web framework, runs on Node.js)
+  - @hono/node-server (production HTTP adapter)
+  - Prisma ORM (PostgreSQL)
+  - Clerk (authentication — currently bypassed in dev with mock passthrough)
+  - Stripe (billing — via @stripe/stripe-js)
+  - Winston (structured logging, optional Elasticsearch transport)
+  - WebSocket (ws package — Yjs CRDT for real-time collaboration)
+
+AI / Audio:
+  - Anthropic Claude API (claude-sonnet-4-6, streaming)
+  - Magenta.js (Google — DrumsRNN + MelodyRNN, runs client-side in browser)
+  - Tone.js (synthesis, sequencing, effects, transport)
+  - Web MIDI API (MIDI controller mapping)
+  - MediaRecorder API (audio export)
+  - Yjs (CRDT for conflict-free collaborative editing)
+
+Infra / Dev:
+  - Turborepo 2.x (monorepo task runner with caching)
+  - pnpm 10.x (workspace package manager)
+  - Vitest 3.x (unit + component tests)
+  - Playwright (E2E tests)
+  - Storybook 8.x (UI component stories, in @aihq/ui package)
+  - Docker Compose (ELK stack: Elasticsearch + Kibana)
+
+==============================================================================
+3. REPOSITORY STRUCTURE (MONOREPO)
+==============================================================================
+
+aihq/
+├── apps/
+│   ├── api/                   Hono.js REST + WebSocket API server
+│   │   └── src/
+│   │       ├── app.ts         App factory (registers all routes)
+│   │       ├── index.ts       Server entry (HTTP + WebSocket)
+│   │       ├── collab/        Yjs WebSocket collab server
+│   │       ├── db/            Prisma client singleton
+│   │       ├── lib/           logger.ts, stripe.ts
+│   │       ├── middleware/    auth.ts, rateLimit.ts, errorHandler.ts
+│   │       ├── routes/        projects, samples, ai, billing, users,
+│   │       │                  snapshots, share, samples-upload, logs, docs
+│   │       └── services/      project.service.ts, ai.service.ts,
+│   │                          snapshot.service.ts, share.service.ts
+│   └── web/                   Next.js 15 App Router frontend
+│       └── src/
+│           ├── app/           Pages: /, /dashboard, /studio/[id],
+│           │                  /pricing, /sign-in, /sign-up, /account,
+│           │                  /share/[token], /studio/new
+│           ├── components/
+│           │   ├── daw/       All DAW UI components (see Section 8)
+│           │   └── layout/    UserMenu, Logo, ThemeToggle
+│           ├── hooks/         useAudioEngine, useAudioSync, useKeyboardShortcuts,
+│           │                  useAutoSave, useAudioEngine
+│           ├── lib/           logger.ts (client-side buffered logger)
+│           └── stores/        One Zustand store per domain (see Section 10)
+├── packages/
+│   ├── audio-engine/          Tone.js wrapper (AudioEngine singleton)
+│   │   └── src/
+│   │       ├── engine/        AudioEngine.ts, TrackManager.ts
+│   │       ├── transport/     Transport.ts
+│   │       ├── sequencer/     Sequencer.ts
+│   │       ├── synth/         Synthesizer.ts
+│   │       ├── sampler/       Sampler.ts
+│   │       ├── effects/       EffectsChain.ts
+│   │       ├── instruments/   SynthDrumKit.ts
+│   │       ├── midi/          MIDIManager.ts
+│   │       ├── export/        StemExporter.ts
+│   │       └── magenta/       MagentaEngine.ts (DrumsRNN + MelodyRNN)
+│   ├── shared/                Zod schemas + TypeScript types
+│   │   └── src/
+│   │       ├── schemas.ts     Track, Clip, MidiNote, SynthPreset, etc.
+│   │       ├── templates.ts   6 genre project templates (EDM, Lo-Fi, etc.)
+│   │       └── index.ts
+│   └── ui/                    Design system (Button, Knob, Slider, Panel,
+│       └── src/               Meter, Avatar, DJDeckCard + Storybook stories)
+├── confluence.txt             THIS FILE
+├── GUIDE.md                   End-user feature guide
+├── turbo.json                 Turborepo pipeline configuration
+├── pnpm-workspace.yaml        Workspace package list
+└── docker-compose.elk.yml     ELK Stack (Elasticsearch + Kibana)
+
+==============================================================================
+4. GETTING STARTED (LOCAL DEV SETUP)
+==============================================================================
+
+Prerequisites:
+  - Node.js 20+ (LTS)
+  - pnpm 10+ (`npm i -g pnpm`)
+  - Docker Desktop (for ELK stack, optional)
+
+Step 1: Clone and install
+  git clone <repo-url>
+  cd aihq
+  pnpm install
+
+Step 2: Configure environment variables
+
+  apps/api/.env:
+    NODE_ENV=development
+    PORT=3001
+    # Optional — leave blank to use in-memory mock DB:
+    DATABASE_URL=postgresql://user:pass@localhost:5432/aihq
+    # Optional — enables Claude AI chat:
+    ANTHROPIC_API_KEY=sk-ant-...
+    # Optional — enables Clerk auth (otherwise dev passthrough is used):
+    CLERK_SECRET_KEY=sk_test_...
+    # Optional — enables Stripe billing:
+    STRIPE_SECRET_KEY=sk_test_...
+    STRIPE_WEBHOOK_SECRET=whsec_...
+
+  apps/web/.env:
+    NEXT_PUBLIC_API_URL=http://localhost:3001
+    NEXT_PUBLIC_WS_URL=ws://localhost:3001
+    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+
+Step 3: Run everything
+  pnpm turbo dev          # All packages in dev mode
+
+  Or individually:
+  pnpm --filter @aihq/api dev       # API on :3001
+  pnpm --filter @aihq/web dev       # Web on :3000
+
+Step 4: Access the app
+  Web UI:      http://localhost:3000
+  API:         http://localhost:3001
+  Swagger UI:  http://localhost:3001/docs
+  OpenAPI JSON:http://localhost:3001/docs/openapi.json
+
+Step 5 (optional): ELK Stack
+  docker-compose -f docker-compose.elk.yml up -d
+  Kibana: http://localhost:5601
+  Elasticsearch: http://localhost:9200
+
+==============================================================================
+5. ARCHITECTURE DEEP-DIVE
+==============================================================================
+
+Request Flow:
+  Browser → Next.js (port 3000) → API (port 3001, /api/* proxied via next.config.ts)
+
+Authentication Flow:
+  - In LOCAL DEV: auth middleware automatically passes through with a mock
+    dev-clerk-user / dev-db-user / STUDIO tier. No Clerk setup needed.
+  - In PRODUCTION: Clerk JWT verified in auth.ts middleware. User must exist
+    in the database (synced via /api/users/sync Clerk webhook).
+
+Audio Signal Chain:
+  MIDI/Keyboard → Instrument (SynthDrumKit | Synthesizer | Sampler)
+               → instrument AudioNode
+               → EffectsChain (reverb → delay → EQ → compressor → distortion)
+               → TrackManager mixerAudioChannel (volume/pan fader)
+               → Tone.getDestination() (master output)
+
+Real-Time Collaboration (Yjs):
+  Browser A → WebSocket (/collab?projectId=X) → CollabServer
+  CollabServer → Y.Doc per project → broadcast Yjs updates to all clients
+  Browser B ← receives update → Y.applyUpdate → local store syncs
+
+==============================================================================
+6. PACKAGE DESCRIPTIONS
+==============================================================================
+
+@aihq/shared (packages/shared)
+  - Zod schemas for all data types: Track, Clip, MidiNote, SynthPreset,
+    StepPattern, ProjectData, etc.
+  - PLAN_LIMITS constants (maxProjects, maxAiGenerations per tier)
+  - PROJECT_TEMPLATES: 6 genre presets used in CreateModal
+  - Compiled to packages/shared/dist, imported by all other packages
+
+@aihq/ui (packages/ui)
+  - Design system: Button, Knob, Slider, Panel, Meter, Avatar, DJDeckCard
+  - CSS custom properties (DAW color tokens: --color-studio-*, --color-accent-*)
+  - Storybook stories for all components
+  - Vitest tests in src/__tests__/
+
+@aihq/audio-engine (packages/audio-engine)
+  - AudioEngine singleton: getInstance() → single shared engine instance
+  - CRITICAL: All Tone.js usage MUST stay in this package.
+    apps/web must NEVER import from 'tone' directly.
+  - Transport: play, stop, seek, BPM, position tracking, metronome
+  - Sequencer: 16-step pattern sequencer, per-track patterns
+  - Synthesizer: polyphonic synth (osc types, ADSR, filter)
+  - SynthDrumKit: 9 synthesized drum pads (no samples required)
+  - EffectsChain: reverb, delay, EQ3, compressor, distortion (all Tone.js)
+  - MIDIManager: Web MIDI API wrapper, CC mapping, learn mode
+  - StemExporter: MediaRecorder-based audio capture + download
+  - MagentaEngine: DrumsRNN + MelodyRNN (loads TF.js models from CDN)
+
+@aihq/api (apps/api)
+  - Hono v4 REST API + WebSocket server
+  - In dev without DATABASE_URL: uses in-memory Maps as mock DB
+  - Routes mounted at /api/* (except /health, /webhooks, /logs, /docs)
+  - All /api/* routes protected by authMiddleware (dev passthrough in local)
+
+@aihq/web (apps/web)
+  - Next.js 15 App Router with "use client" DAW components
+  - Proxies /api/* to localhost:3001 (configured in next.config.ts)
+
+==============================================================================
+7. FRONTEND (NEXT.JS APP)
+==============================================================================
+
+Pages:
+  /                   Landing page (static)
+  /pricing            Pricing plans (static)
+  /dashboard          Project list + account overview (fetches /api/projects)
+  /sign-in            Clerk sign-in (stub in dev)
+  /sign-up            Clerk sign-up (stub in dev)
+  /account            User account page
+  /studio/[id]        The main DAW interface
+  /studio/new         Auto-creates a project and redirects to /studio/[id]
+  /share/[token]      Public project share page (no auth required)
+
+DAW Component Tree (apps/web/src/components/daw/):
+
+  TransportBar          — Play/Stop/Record, BPM, metronome, position readout
+  SessionView           — Arrangement view: track rows with clip blocks
+  StepSequencer         — 9×16 drum step grid, per-step velocity
+  PianoRoll             — Canvas-based piano roll: drag notes, playhead
+  Mixer                 — Per-track channel strips (volume, pan, mute, solo, meter)
+  SynthPanel            — Oscillator type, ADSR, filter cutoff/res knobs + preview
+  EffectsRack           — Per-track effects: reverb, delay, EQ, compressor, distortion
+  DJMixer               — Dual-deck DJ mode with crossfader
+  SampleBrowser         — Upload audio files, search, drag onto tracks, preview
+  MIDIPanel             — Web MIDI connect, CC mapping with learn mode
+  MasteringPanel        — AI mastering analysis (calls /api/ai/chat streaming)
+  PluginBrowser         — 8 built-in plugins (dynamics, fx, utility, creative)
+  VersionHistoryPanel   — Save/restore project snapshots (calls /api/projects/:id/snapshots)
+  CollabPresence        — Real-time collaboration status + user avatars
+  ExportDialog          — Record + download project audio (MediaRecorder)
+  PerformanceView       — Fullscreen 8-pad live performance mode (keyboard + MIDI)
+  AIPanel               — Magenta drums/melody generation + Claude chat
+
+==============================================================================
+8. BACKEND API (HONO)
+==============================================================================
+
+All API routes are documented at: http://localhost:3001/docs (Swagger UI)
+
+Key routes:
+
+  GET  /health                          Health check (unauthenticated)
+  GET  /docs                            Swagger UI (unauthenticated)
+  GET  /docs/openapi.json               OpenAPI 3.0 spec (unauthenticated)
+  POST /logs                            Frontend log ingestion (unauthenticated)
+
+  GET  /api/projects                    List projects
+  POST /api/projects                    Create project (accepts templateId)
+  GET  /api/projects/:id                Get single project
+  PATCH /api/projects/:id               Rename project
+  PUT  /api/projects/:id/save           Save project state (tracks/BPM/etc)
+  DELETE /api/projects/:id              Delete project
+
+  GET  /api/projects/:id/snapshots      List version snapshots
+  POST /api/projects/:id/snapshots      Create snapshot
+  GET  /api/projects/:id/snapshots/:sid Restore snapshot state
+  DELETE /api/projects/:id/snapshots/:sid Delete snapshot
+
+  POST /api/projects/:id/share          Create/refresh public share link
+  GET  /api/projects/:id/share          Get current share info
+  DELETE /api/projects/:id/share        Revoke share
+  GET  /api/share/:token                Public share lookup (no auth)
+
+  GET  /api/samples                     List uploaded samples
+  POST /api/samples/upload              Upload audio file (multipart)
+  GET  /api/samples/:id/stream          Stream/download sample
+  DELETE /api/samples/:id              Delete sample
+
+  POST /api/ai/chat                     Claude AI chat (streaming text)
+  POST /api/ai/log                      Log Magenta generation
+  GET  /api/ai/usage                    AI generation usage stats
+
+  GET  /api/users/me                    Current user profile
+  POST /api/billing/checkout            Stripe Checkout session
+  POST /api/billing/portal              Stripe billing portal
+
+WebSocket: ws://localhost:3001/collab?projectId=X&userId=Y&userName=Z
+  Binary protocol:
+    0x01 + Yjs update bytes = broadcast document update
+    0x02 = sync request (server sends full state)
+    0x03 + JSON bytes = presence update (array of {userId, userName, color})
+
+==============================================================================
+9. AUDIO ENGINE (TONE.JS)
+==============================================================================
+
+The AudioEngine is a singleton initialized lazily on first user interaction:
+  import { audioEngine } from "@aihq/audio-engine";
+  await audioEngine.initialize(); // creates Tone.js AudioContext
+
+CRITICAL RULE: apps/web must NEVER import from 'tone' directly.
+All Tone.js code stays in packages/audio-engine.
+
+Key singleton surfaces:
+  audioEngine.transport      — play(), stop(), seek(), BPM, onPositionChange()
+  audioEngine.sequencer      — setPattern(), setStepActive(), start/stop
+  audioEngine.trackManager   — registerTrack(), setVolume(), setPan(), etc.
+  audioEngine.magenta        — init(), generateDrums(temp), generateMelody(seed, temp)
+  audioEngine.isInitialized  — boolean, check before calling audio methods
+
+Instrument types:
+  "drum"  → SynthDrumKit (9 synthesized pads, no samples required)
+  "synth" → Synthesizer (polyphonic, ADSR, osc type, filter)
+  "bass"  → Synthesizer (mono bass preset)
+
+==============================================================================
+10. STATE MANAGEMENT (ZUSTAND)
+==============================================================================
+
+All stores are in apps/web/src/stores/. Each store follows the pattern:
+  export const useXxxStore = create<XxxState>()(devtools(immer((set, get) => ({...}))))
+
+Stores:
+  transportStore    — isPlaying, isRecording, bpm, position, metronome
+  tracksStore       — tracks[], selectedTrackId, all track mutations
+  uiStore           — activeBottomPanel, isAIPanelOpen (BottomPanel union type)
+  aiStore           — chatMessages, streamingMessage, magentaLoaded, isGenerating
+  djStore           — decks[], crossfader, eq settings
+  samplesStore      — samples[], loading, uploading, fetchSamples, uploadSample
+  midiStore         — status, deviceNames, mappings, learningId (persisted)
+  versionStore      — snapshots[], loading, saving, fetchSnapshots, saveSnapshot
+  shareStore        — shareToken, shareUrl, loading, createShare, revokeShare
+  pluginStore       — plugins[], togglePlugin (8 built-in plugins, persisted)
+  collabStore       — status, users[], doc (Y.Doc), connect(), disconnect()
+
+The hook useAudioSync (apps/web/src/hooks/useAudioSync.ts) bridges Zustand →
+audio engine reactively: when tracks change, it calls trackManager APIs.
+
+==============================================================================
+11. AUTHENTICATION & AUTHORIZATION
+==============================================================================
+
+Dev mode (no CLERK_SECRET_KEY set):
+  - authMiddleware passes all requests with:
+    clerkUserId: "dev-clerk-user"
+    dbUserId:    "dev-db-user"
+    tier:        "STUDIO"
+  - All features are accessible without login
+
+Production mode:
+  - Clerk JWT verified via @clerk/backend verifyToken()
+  - User must exist in DB (synced via /webhooks/clerk POST — user.created event)
+  - Plan tiers: FREE, PRO, STUDIO (from Prisma subscription table)
+  - AI chat requires PRO or STUDIO tier
+  - Free tier: limited projects, no AI chat, no AI generation
+
+CORS: Only origins in ALLOWED_ORIGINS env var (default: http://localhost:3000)
+
+==============================================================================
+12. DATABASE SCHEMA (PRISMA)
+==============================================================================
+
+Models (apps/api/prisma/schema.prisma):
+
+  User          id, clerkId, email, name, createdAt, updatedAt
+  Subscription  id, userId→User, tier(FREE/PRO/STUDIO), stripeCustomerId,
+                stripePriceId, currentPeriodEnd, cancelAtEnd, createdAt
+  Project       id, userId→User, name, description, bpm, key, scale,
+                data(Json), thumbnailUrl, isPublic, createdAt, updatedAt,
+                lastOpenedAt
+  AIGeneration  id, userId→User, type, tokensUsed, createdAt
+
+Note: Snapshots and Shares are stored in-memory (Map<>) in dev without DB.
+      In production, add Snapshot and Share Prisma models.
+
+Without DATABASE_URL: all data stored in-memory Maps, cleared on server restart.
+
+==============================================================================
+13. KEY FEATURES & THEIR IMPLEMENTATION
+==============================================================================
+
+Step Sequencer
+  Component:   StepSequencer.tsx
+  Store:       tracksStore (stepPattern per track)
+  Audio:       audioEngine.sequencer.setPattern()
+  Each drum track has a 16-step boolean array + velocities array.
+  StepButton components are memoized to prevent re-renders.
+
+Piano Roll
+  Component:   PianoRoll.tsx, NoteGrid.tsx
+  Store:       tracksStore (clips[].notes[])
+  Canvas-based (not DOM nodes) for 88-key × many-beats performance.
+  Supports: step record mode, drag-to-move notes, note resize.
+
+Mixer
+  Component:   Mixer.tsx, ChannelStrip.tsx
+  Store:       tracksStore (volume, pan, muted, soloed)
+  Audio:       audioEngine.trackManager.setVolume/setPan/setMuted
+  Live VU meters via Web Audio AnalyserNode → Meter canvas component.
+
+AI Chat (Claude)
+  Component:   ChatInterface.tsx → POST /api/ai/chat
+  The endpoint streams text (Hono stream()). ChatInterface reads via
+  response.body.getReader() and appends tokens to streamingMessage in aiStore.
+  Requires ANTHROPIC_API_KEY in apps/api/.env.
+
+AI Mastering
+  Component:   MasteringPanel.tsx → POST /api/ai/chat (streaming)
+  Asks Claude to return a JSON object with EQ, compression, loudness settings.
+  Parses the JSON from the streamed response and displays visual results.
+
+Magenta.js AI Generation
+  Component:   AIPanel.tsx (Drums + Melody tabs)
+  Engine:      audioEngine.magenta.init() / generateDrums() / generateMelody()
+  Loads TF.js models from CDN on first use. Runs entirely client-side.
+
+Real-Time Collaboration (Yjs)
+  Store:       collabStore.ts (Yjs Y.Doc + WebSocket)
+  Server:      apps/api/src/collab/CollabServer.ts
+  Protocol:    Binary frames — 0x01=Yjs update, 0x02=sync, 0x03=presence
+  CollabPresence.tsx renders connection status + other users' avatars.
+
+MIDI Controller
+  Store:       midiStore.ts (persisted to localStorage)
+  Engine:      packages/audio-engine/src/midi/MIDIManager.ts
+  Connect → Web MIDI API requestMIDIAccess()
+  CC Mapping → Learn mode captures next incoming CC
+  Dispatches window CustomEvents: "midi:cc" and "midi:noteon"
+
+Audio Export
+  Component:   ExportDialog.tsx
+  Engine:      StemExporter (MediaRecorder on AudioContext destination)
+  Flow: Record → play project → stop → download WebM/Opus file
+
+Version History (Snapshots)
+  Component:   VersionHistoryPanel.tsx
+  API:         GET/POST/DELETE /api/projects/:id/snapshots
+  Captures: { tracks: Track[], bpm: number } → restore restores both
+
+Project Templates
+  Data:        packages/shared/src/templates.ts (6 presets)
+  Component:   TemplateSelector.tsx (shown in CreateModal)
+  When selected, POST /api/projects with templateId. Server applies
+  template tracks and BPM to the new project.
+
+Public Sharing
+  Component:   SharePanel (via shareStore) + /share/[token] page
+  API:         POST /api/projects/:id/share → returns { token, url }
+  Share page: animated waveform, track list, copy link, CTA
+
+Performance Mode
+  Component:   PerformanceView.tsx (fixed overlay)
+  8 pads mapped to Q/W/E/R/A/S/D/F keys
+  Space = Play/Stop | Fullscreen API | MIDI noteon events
+
+Plugin Browser
+  Store:       pluginStore.ts (8 built-in virtual plugins, persisted)
+  Categories:  dynamics, fx, utility, creative
+  Currently cosmetic — plugins activate/deactivate in the store.
+  Future: wire to EffectsChain per plugin type.
+
+ELK Stack Logging
+  Backend:  apps/api/src/lib/logger.ts (Winston + optional ES transport)
+  Frontend: apps/web/src/lib/logger.ts (buffered, ships to POST /logs)
+  Start ELK: docker-compose -f docker-compose.elk.yml up -d
+  View logs: http://localhost:5601 (Kibana)
+
+==============================================================================
+14. API REFERENCE (SWAGGER UI)
+==============================================================================
+
+Interactive API docs: http://localhost:3001/docs
+OpenAPI 3.0 spec:    http://localhost:3001/docs/openapi.json
+
+All endpoints require Bearer token auth except:
+  /health, /docs/*, /logs, /api/share/:token
+
+In local dev, the auth middleware uses a passthrough — no token needed.
+When testing in Swagger UI locally, you don't need to set Authorization.
+
+==============================================================================
+15. TESTING STRATEGY
+==============================================================================
+
+Unit Tests:
+  pnpm turbo test
+  - @aihq/shared:  11 tests (schema validation)
+  - @aihq/api:     19 tests (routes, services, logger)
+  - @aihq/audio-engine: 38 tests (AudioEngine, Transport, Sequencer, etc.)
+  - @aihq/web:     27 tests (hooks, stores, components)
+  - @aihq/ui:       3 tests (Panel component + Storybook interaction test)
+
+UI / Component Tests:
+  pnpm --filter @aihq/web test          # Vitest + React Testing Library
+  pnpm --filter @aihq/ui test           # Storybook interaction tests
+
+E2E Tests:
+  pnpm --filter @aihq/web test:e2e      # Playwright
+  Tests: sign-in, dashboard, create project, studio navigation, transport
+
+Storybook:
+  pnpm --filter @aihq/ui storybook      # Dev server on :6006
+  pnpm --filter @aihq/ui build-storybook # Static build
+
+Test config:
+  Vitest config per package (vitest.config.ts)
+  jsdom environment for UI tests
+  Coverage via @vitest/coverage-v8
+
+==============================================================================
+16. LOGGING & OBSERVABILITY (ELK STACK)
+==============================================================================
+
+Backend logging (Winston):
+  import { log } from "./lib/logger";
+  log.info("message", { key: "value" });
+  log.debug / log.warn / log.error
+  log.timed("label", asyncFn, ctx)      — logs duration
+  log.child({ service: "x" })           — child logger with extra context
+  log.ingestFrontend(entries)           — called by POST /logs route
+
+  Dev: colorized human-readable output to stdout
+  Prod: JSON format to stdout
+  With ES_URL env var: also ships to Elasticsearch
+
+Frontend logging:
+  import { log } from "@/lib/logger";
+  Buffers up to 20 entries, flushes every 5s to POST /logs
+  Debug level: browser console only (not shipped)
+
+ELK Stack setup:
+  docker-compose -f docker-compose.elk.yml up -d
+  Elasticsearch: http://localhost:9200
+  Kibana:        http://localhost:5601
+  API env:       ES_URL=http://localhost:9200
+  Index:         aihq-logs (auto-created)
+
+Live dev terminal scripts:
+  Windows: scripts/dev-elk.ps1   (4 PowerShell windows)
+  macOS:   scripts/dev-elk.sh    (4 terminal tabs)
+
+==============================================================================
+17. CI/CD & DEPLOYMENT
+==============================================================================
+
+Build pipeline (turbo.json):
+  build → test → lint  (in order, respects package dependencies)
+  pnpm turbo build    # builds all 5 packages
+  pnpm turbo test     # runs all tests after build
+  pnpm turbo lint     # ESLint all packages
+
+Deployment:
+  Frontend: Vercel (auto-deploys from main branch)
+    - NEXT_PUBLIC_API_URL points to production API
+    - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY for auth
+  Backend: Render or Fly.io (Docker or Node process)
+    - DATABASE_URL, CLERK_SECRET_KEY, ANTHROPIC_API_KEY, STRIPE_SECRET_KEY
+
+Environment files (never commit):
+  apps/api/.env
+  apps/web/.env
+
+For production, all in-memory mock services must be replaced with real DB:
+  - mockProjects → Prisma Project model
+  - In-memory snapshots → Prisma Snapshot model (add to schema)
+  - In-memory shares → Prisma Share model (add to schema)
+  - In-memory samples → S3/R2 bucket + DB record
+
+==============================================================================
+18. CONTRIBUTING GUIDELINES
+==============================================================================
+
+Branch naming:
+  feat/    → new feature
+  fix/     → bug fix
+  perf/    → performance improvement
+  refactor/→ code refactor
+  docs/    → documentation only
+  test/    → tests only
+
+Commit format: Conventional Commits
+  feat: add MIDI learn mode
+  fix: correct streaming response parsing in MasteringPanel
+  perf: memoize StepButton to reduce re-renders
+
+Code rules:
+  1. TypeScript strict mode — no `any` types, no type assertions without reason
+  2. "use client" required on all components that use hooks, browser APIs, or
+     event handlers in Next.js App Router
+  3. NEVER import from 'tone' in apps/web — all Tone.js must stay in audio-engine
+  4. All new API routes need AuthVariables generic: new Hono<{Variables: AuthVariables}>()
+  5. Use Zustand's immer middleware for complex state mutations
+  6. New features need: component + store + API route + tests + Storybook story
+  7. Audio-Engine code must handle uninitialized engine gracefully
+
+Adding a new bottom panel tab:
+  1. Add type to BottomPanel union in uiStore.ts
+  2. Create component in apps/web/src/components/daw/
+  3. Add PanelTab + panel render to studio/[id]/page.tsx
+  4. Add Storybook story in packages/ui or as component story
+
+Adding a new API route:
+  1. Create apps/api/src/routes/xxx.ts with new Hono<{Variables: AuthVariables}>()
+  2. Add to app.ts: api.route("/xxx", xxxRouter)
+  3. Update docs.ts OpenAPI spec
+  4. Write tests in apps/api/src/__tests__/xxx.test.ts
+
+==============================================================================
+19. COMMON PITFALLS & GOTCHAS
+==============================================================================
+
+1. "Cannot use 'tone' in apps/web"
+   → Always import from '@aihq/audio-engine', never 'tone'
+
+2. "audioEngine.initialize() must be called after user gesture"
+   → Web Audio context must start from a user interaction (click/keypress)
+   → AudioEngine handles this lazily via useAudioEngine hook
+
+3. "Hydration mismatch in Next.js"
+   → All DAW components use "use client" — they SSR as empty placeholders
+   → Zustand stores initialize client-side; use useEffect for audio init
+
+4. "Hono route type error on c.get('dbUserId')"
+   → Use new Hono<{ Variables: AuthVariables }>() not new Hono()
+
+5. "CollabPresence shows error state"
+   → WebSocket tries ws://localhost:3001/collab — ensure API server is running
+   → In production set NEXT_PUBLIC_WS_URL to wss://your-api-domain.com
+
+6. "AI chat returns error: PLAN_REQUIRED"
+   → In local dev, tier is always "STUDIO" — this shouldn't happen
+   → If it does, check auth middleware is using the dev passthrough
+
+7. "MediaRecorder export produces silent file"
+   → ExportDialog needs AudioContext from audioEngine transport
+   → Must click Record AFTER audioEngine is initialized
+
+8. "Magenta.js fails to load"
+   → Requires internet connection to download TF.js model files from CDN
+   → Check browser console for model download errors
+
+9. "pnpm turbo build fails with cache errors"
+   → Run: pnpm turbo build --force  (bypass cache)
+   → Or delete .turbo/ directory
+
+10. "TypeScript error: immer draft type"
+    → When using immer, mutations on draft state are fine
+    → For return values from immer callbacks, return new state explicitly
+
+==============================================================================
+20. ROADMAP & FUTURE WORK
+==============================================================================
+
+Phase 1 (Complete):
+  ✓ DAW UI: Transport, Sequencer, Piano Roll, Mixer, Synth, Effects, DJ
+  ✓ AI Integration: Claude chat, Magenta.js generation, AI mastering
+  ✓ Real-time Collaboration (Yjs CRDT)
+  ✓ MIDI Controller mapping
+  ✓ Audio Export (MediaRecorder)
+  ✓ Project Templates
+  ✓ Version History (snapshots)
+  ✓ Plugin Browser (8 built-in plugins)
+  ✓ Live Performance Mode
+  ✓ Sharing & Public share pages
+  ✓ ELK Stack logging
+  ✓ Swagger API docs
+  ✓ Storybook component library
+
+Phase 2 (Next):
+  □ Replace in-memory mock DB with real PostgreSQL + Prisma migrations
+  □ Enable Clerk auth in production
+  □ Enable Stripe billing with real subscription management
+  □ S3/R2 storage for uploaded audio samples
+  □ Wire plugin browser to real EffectsChain (currently cosmetic)
+  □ Waveform display in session view clips (AudioWorklet)
+  □ Audio recording from microphone (ARM track, record)
+  □ Collaborative piano roll (Yjs-synced notes)
+  □ Project backup/export as ZIP (tracks + project JSON)
+  □ Mobile-responsive DAW layout
+  □ Offline mode (IndexedDB for project/sample storage)
+
+Phase 3 (Future):
+  □ VST plugin hosting (via AudioWorklet sandboxing)
+  □ Stem separation (AI-powered, Demucs model)
+  □ Marketplace for user-created presets and samples
+  □ Video sync mode (sync DAW to video file)
+  □ Advanced MIDI: MIDI file import/export, MIDI routing between tracks
+  □ Advanced AI: auto-arrangement, genre-specific style transfer
+
+==============================================================================
+END OF CONFLUENCE GUIDE
+Contact: engineering@aihq.io | Slack: #aihq-engineering
+==============================================================================

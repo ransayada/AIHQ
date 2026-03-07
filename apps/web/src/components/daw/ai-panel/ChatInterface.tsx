@@ -18,8 +18,8 @@ export function ChatInterface() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages, streamingMessage]);
 
-  const handleSend = async () => {
-    const msg = input.trim();
+  const handleSend = async (overrideMessage?: string) => {
+    const msg = (overrideMessage ?? input).trim();
     if (!msg || isGenerating) return;
 
     setInput("");
@@ -94,7 +94,7 @@ export function ChatInterface() {
                 <button
                   key={suggestion}
                   onClick={() => {
-                    setInput(suggestion);
+                    void handleSend(suggestion);
                   }}
                   className="block w-full text-left px-2 py-1.5 rounded text-xs border border-[var(--color-studio-600)] hover:bg-[var(--color-studio-600)] transition-colors"
                 >

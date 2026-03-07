@@ -21,6 +21,8 @@ const OSC_TYPES: SynthPreset["oscillator"]["type"][] = [
   "fatsawtooth",
 ];
 
+type PresetBank = "EDM" | "Strings" | "Wind" | "Keys";
+
 const EDM_PRESETS: Array<{ name: string; preset: SynthPreset }> = [
   {
     name: "Supersaw",
@@ -71,6 +73,194 @@ const EDM_PRESETS: Array<{ name: string; preset: SynthPreset }> = [
     },
   },
 ];
+
+// ── Strings bank — emulate bowed string instruments via slow-attack sawtooth ──
+const STRINGS_PRESETS: Array<{ name: string; preset: SynthPreset }> = [
+  {
+    // Violin — bright, thin, quick bow attack
+    name: "Violin",
+    preset: {
+      oscillator: { type: "sawtooth", detune: 5, count: 2 },
+      envelope: { attack: 0.06, decay: 0.05, sustain: 0.85, release: 0.4 },
+      filter: { type: "highpass", frequency: 400, rolloff: -12, Q: 1, envelopeAmount: 0 },
+    },
+  },
+  {
+    // Viola — mid-range, warmer than violin
+    name: "Viola",
+    preset: {
+      oscillator: { type: "sawtooth", detune: 3, count: 2 },
+      envelope: { attack: 0.1, decay: 0.05, sustain: 0.8, release: 0.5 },
+      filter: { type: "lowpass", frequency: 3000, rolloff: -12, Q: 1.5, envelopeAmount: 0 },
+    },
+  },
+  {
+    // Cello — deep, rich, slow bow
+    name: "Cello",
+    preset: {
+      oscillator: { type: "sawtooth", detune: 2, count: 1 },
+      envelope: { attack: 0.15, decay: 0.1, sustain: 0.75, release: 0.7 },
+      filter: { type: "lowpass", frequency: 1800, rolloff: -24, Q: 0.8, envelopeAmount: 0 },
+    },
+  },
+  {
+    // Ensemble — fat stacked strings, classic film score
+    name: "Ensemble",
+    preset: {
+      oscillator: { type: "fatsawtooth", detune: 12, count: 5 },
+      envelope: { attack: 0.35, decay: 0.2, sustain: 0.9, release: 1.2 },
+      filter: { type: "lowpass", frequency: 4000, rolloff: -12, Q: 1, envelopeAmount: 0 },
+    },
+  },
+  {
+    // Pizzicato — short plucked string, no sustain
+    name: "Pizzicato",
+    preset: {
+      oscillator: { type: "triangle", detune: 0, count: 1 },
+      envelope: { attack: 0.001, decay: 0.4, sustain: 0, release: 0.3 },
+      filter: { type: "lowpass", frequency: 2500, rolloff: -24, Q: 1, envelopeAmount: 0 },
+    },
+  },
+  {
+    // Tremolo — rapid bow strokes, add shimmer
+    name: "Tremolo",
+    preset: {
+      oscillator: { type: "sawtooth", detune: 8, count: 3 },
+      envelope: { attack: 0.02, decay: 0.03, sustain: 0.7, release: 0.5 },
+      filter: { type: "bandpass", frequency: 2200, rolloff: -12, Q: 3, envelopeAmount: 0 },
+    },
+  },
+];
+
+// ── Wind bank — emulate breath-driven instruments via sine/triangle with fast attack ──
+const WIND_PRESETS: Array<{ name: string; preset: SynthPreset }> = [
+  {
+    // Flute — pure, breathy, high overtones
+    name: "Flute",
+    preset: {
+      oscillator: { type: "sine", detune: 2, count: 2 },
+      envelope: { attack: 0.08, decay: 0.05, sustain: 0.9, release: 0.3 },
+      filter: { type: "highpass", frequency: 600, rolloff: -12, Q: 0.7, envelopeAmount: 0 },
+    },
+  },
+  {
+    // Clarinet — hollow, square-wave body
+    name: "Clarinet",
+    preset: {
+      oscillator: { type: "square", detune: 0, count: 1 },
+      envelope: { attack: 0.04, decay: 0.05, sustain: 0.85, release: 0.25 },
+      filter: { type: "lowpass", frequency: 2400, rolloff: -24, Q: 2, envelopeAmount: 0 },
+    },
+  },
+  {
+    // Oboe — nasal, reedy, bright mid
+    name: "Oboe",
+    preset: {
+      oscillator: { type: "sawtooth", detune: 0, count: 1 },
+      envelope: { attack: 0.04, decay: 0.04, sustain: 0.8, release: 0.2 },
+      filter: { type: "bandpass", frequency: 1800, rolloff: -12, Q: 6, envelopeAmount: 0 },
+    },
+  },
+  {
+    // Trumpet — bright brass, strong attack
+    name: "Trumpet",
+    preset: {
+      oscillator: { type: "sawtooth", detune: 0, count: 1 },
+      envelope: { attack: 0.02, decay: 0.1, sustain: 0.7, release: 0.15 },
+      filter: { type: "highpass", frequency: 500, rolloff: -12, Q: 1.5, envelopeAmount: 0 },
+    },
+  },
+  {
+    // French Horn — warm, rounded brass
+    name: "French Horn",
+    preset: {
+      oscillator: { type: "triangle", detune: 5, count: 2 },
+      envelope: { attack: 0.1, decay: 0.1, sustain: 0.75, release: 0.5 },
+      filter: { type: "lowpass", frequency: 2000, rolloff: -24, Q: 1, envelopeAmount: 0 },
+    },
+  },
+  {
+    // Alto Sax — warm, mellow, mid-forward
+    name: "Alto Sax",
+    preset: {
+      oscillator: { type: "sawtooth", detune: 3, count: 1 },
+      envelope: { attack: 0.03, decay: 0.08, sustain: 0.8, release: 0.35 },
+      filter: { type: "lowpass", frequency: 3000, rolloff: -12, Q: 3, envelopeAmount: 0 },
+    },
+  },
+];
+
+// ── Keys bank — keyboard instruments via precise attack/decay shapes ──
+const KEYS_PRESETS: Array<{ name: string; preset: SynthPreset }> = [
+  {
+    // Piano — percussive, quick decay, no sustain
+    name: "Piano",
+    preset: {
+      oscillator: { type: "triangle", detune: 0, count: 1 },
+      envelope: { attack: 0.001, decay: 1.2, sustain: 0.1, release: 1.0 },
+      filter: { type: "lowpass", frequency: 5000, rolloff: -24, Q: 0.7, envelopeAmount: 0 },
+    },
+  },
+  {
+    // Electric Piano — Rhodes-style, bright click then warm sustain
+    name: "E.Piano",
+    preset: {
+      oscillator: { type: "triangle", detune: 8, count: 2 },
+      envelope: { attack: 0.002, decay: 0.8, sustain: 0.3, release: 0.8 },
+      filter: { type: "lowpass", frequency: 3500, rolloff: -12, Q: 1.5, envelopeAmount: 0 },
+    },
+  },
+  {
+    // Organ — no decay, flat sustain, fast release (drawbar style)
+    name: "Organ",
+    preset: {
+      oscillator: { type: "square", detune: 0, count: 3 },
+      envelope: { attack: 0.001, decay: 0, sustain: 1.0, release: 0.02 },
+      filter: { type: "lowpass", frequency: 6000, rolloff: -12, Q: 0.5, envelopeAmount: 0 },
+    },
+  },
+  {
+    // Harpsichord — instant pluck, no sustain, bright top
+    name: "Harpischord",
+    preset: {
+      oscillator: { type: "sawtooth", detune: 0, count: 1 },
+      envelope: { attack: 0.001, decay: 0.3, sustain: 0, release: 0.1 },
+      filter: { type: "highpass", frequency: 800, rolloff: -12, Q: 1, envelopeAmount: 0 },
+    },
+  },
+  {
+    // Marimba — resonant, mallet percussion
+    name: "Marimba",
+    preset: {
+      oscillator: { type: "sine", detune: 0, count: 1 },
+      envelope: { attack: 0.001, decay: 0.5, sustain: 0, release: 0.4 },
+      filter: { type: "lowpass", frequency: 4000, rolloff: -24, Q: 2, envelopeAmount: 0 },
+    },
+  },
+  {
+    // Vibraphone — metallic sustain, soft mallet
+    name: "Vibraphone",
+    preset: {
+      oscillator: { type: "triangle", detune: 3, count: 2 },
+      envelope: { attack: 0.005, decay: 1.5, sustain: 0.2, release: 1.8 },
+      filter: { type: "lowpass", frequency: 8000, rolloff: -12, Q: 1, envelopeAmount: 0 },
+    },
+  },
+];
+
+const ALL_PRESET_BANKS: Record<PresetBank, Array<{ name: string; preset: SynthPreset }>> = {
+  EDM: EDM_PRESETS,
+  Strings: STRINGS_PRESETS,
+  Wind: WIND_PRESETS,
+  Keys: KEYS_PRESETS,
+};
+
+const BANK_COLORS: Record<PresetBank, string> = {
+  EDM:     "var(--color-accent-purple)",
+  Strings: "#f59e0b",
+  Wind:    "var(--color-accent-cyan)",
+  Keys:    "var(--color-accent-green)",
+};
 
 const FILTER_TYPES: SynthPreset["filter"]["type"][] = [
   "lowpass",
@@ -161,7 +351,8 @@ function KnobField({ label, value, min, max, onChange, decimals = 2 }: {
 
 export function SynthPanel() {
   const { tracks, selectedTrackId, setSynthPreset } = useTracksStore();
-  const [octave, setOctave] = React.useState(4);
+  const [octave, setOctave]         = React.useState(4);
+  const [presetBank, setPresetBank] = React.useState<PresetBank>("EDM");
 
   const selectedTrack = tracks.find((t) => t.id === selectedTrackId && t.type === "synth");
   const preset: SynthPreset = selectedTrack?.synthPreset ?? DEFAULT_PRESET;
@@ -224,14 +415,36 @@ export function SynthPanel() {
         </div>
       </div>
 
-      {/* EDM Presets */}
+      {/* Instrument Presets — bank tabs + preset grid */}
       <Section title="Presets">
+        {/* Bank selector */}
+        <div className="flex gap-1 mb-2 flex-wrap w-full">
+          {(Object.keys(ALL_PRESET_BANKS) as PresetBank[]).map((bank) => (
+            <button
+              key={bank}
+              onClick={() => setPresetBank(bank)}
+              className={cn(
+                "px-2.5 py-1 rounded text-[9px] font-bold uppercase tracking-wider transition-colors border",
+                presetBank === bank
+                  ? "text-black border-transparent"
+                  : "border-[var(--color-studio-600)] text-[var(--color-studio-400)] hover:text-white hover:border-[var(--color-studio-400)]"
+              )}
+              style={presetBank === bank ? { background: BANK_COLORS[bank], borderColor: BANK_COLORS[bank] } : {}}
+            >
+              {bank}
+            </button>
+          ))}
+        </div>
+        {/* Preset buttons for selected bank */}
         <div className="flex gap-1 flex-wrap">
-          {EDM_PRESETS.map((p) => (
+          {ALL_PRESET_BANKS[presetBank].map((p) => (
             <button
               key={p.name}
               onClick={() => update(p.preset)}
-              className="px-2.5 py-1 rounded text-[9px] font-semibold transition-colors border border-[var(--color-studio-600)] text-[var(--color-studio-300)] hover:text-white hover:border-[var(--color-accent-purple)] hover:bg-[var(--color-studio-700)]"
+              className="px-2.5 py-1 rounded text-[9px] font-semibold transition-colors border border-[var(--color-studio-600)] text-[var(--color-studio-300)] hover:text-white hover:bg-[var(--color-studio-700)]"
+              style={{ ["--hover-border" as string]: BANK_COLORS[presetBank] }}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = BANK_COLORS[presetBank])}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "")}
             >
               {p.name}
             </button>

@@ -7,8 +7,6 @@ import { aiService } from "../services/ai.service";
 import { rateLimit } from "../middleware/rateLimit";
 import type { AuthVariables } from "../middleware/auth";
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
 const router = new Hono<{ Variables: AuthVariables }>();
 
 const ChatSchema = z.object({
@@ -40,6 +38,8 @@ router.post(
     const userId = c.get("dbUserId");
     const tier = c.get("tier");
 
+    const hasDatabase = process.env.USE_MOCK_DB !== "true" && Boolean(process.env.DATABASE_URL);
+
     // Check plan access
     const { claudeChat } = {
       claudeChat: tier === "PRO" || tier === "STUDIO",
@@ -56,15 +56,17 @@ router.post(
       );
     }
 
-    // Check generation limits
-    try {
-      await aiService.checkGenerationLimit(userId, tier);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
-      if (message.startsWith("AI_LIMIT_REACHED:")) {
-        return c.json({ error: { code: "AI_LIMIT_REACHED", message: message.slice(17) } }, 429);
+    // Check generation limits (skip when no database is configured in local dev)
+    if (hasDatabase) {
+      try {
+        await aiService.checkGenerationLimit(userId, tier);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        if (message.startsWith("AI_LIMIT_REACHED:")) {
+          return c.json({ error: { code: "AI_LIMIT_REACHED", message: message.slice(17) } }, 429);
+        }
+        throw err;
       }
-      throw err;
     }
 
     const { messages, projectContext } = c.req.valid("json");
@@ -79,6 +81,21 @@ router.post(
     ]
       .filter(Boolean)
       .join(" ");
+
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return c.json(
+        {
+          error: {
+            code: "MISSING_API_KEY",
+            message:
+              "Anthropic API key is not configured. Set ANTHROPIC_API_KEY in apps/api/.env to enable Claude chat in local development.",
+          },
+        },
+        500
+      );
+    }
+
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
     // Stream the response
     return stream(c, async (stream) => {
@@ -104,9 +121,11 @@ router.post(
           }
         }
 
-        // Log usage after stream completes
-        await aiService.incrementGenerationUsage(userId);
-        await aiService.logGeneration(userId, "chat", totalTokens);
+        // Log usage after stream completes (only when database is configured)
+        if (hasDatabase) {
+          await aiService.incrementGenerationUsage(userId);
+          await aiService.logGeneration(userId, "chat", totalTokens);
+        }
       } catch (err) {
         await stream.write("\n\n[Error generating response. Please try again.]");
         console.error("Claude streaming error:", err);
@@ -127,6 +146,8 @@ router.post(
     const tier = c.get("tier");
     const { type } = c.req.valid("json");
 
+    const hasDatabase = process.env.USE_MOCK_DB !== "true" && Boolean(process.env.DATABASE_URL);
+
     // Check limits for Pro tier
     if (tier === "FREE") {
       return c.json(
@@ -135,16 +156,18 @@ router.post(
       );
     }
 
-    try {
-      await aiService.checkGenerationLimit(userId, tier);
-      await aiService.incrementGenerationUsage(userId);
-      await aiService.logGeneration(userId, type);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
-      if (message.startsWith("AI_LIMIT_REACHED:")) {
-        return c.json({ error: { code: "AI_LIMIT_REACHED", message: message.slice(17) } }, 429);
+    if (hasDatabase) {
+      try {
+        await aiService.checkGenerationLimit(userId, tier);
+        await aiService.incrementGenerationUsage(userId);
+        await aiService.logGeneration(userId, type);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        if (message.startsWith("AI_LIMIT_REACHED:")) {
+          return c.json({ error: { code: "AI_LIMIT_REACHED", message: message.slice(17) } }, 429);
+        }
+        throw err;
       }
-      throw err;
     }
 
     return c.json({ data: { success: true } });
@@ -154,6 +177,18 @@ router.post(
 // GET /api/ai/usage — get current AI usage stats
 router.get("/usage", async (c) => {
   const userId = c.get("dbUserId");
+  const hasDatabase = Boolean(process.env.DATABASE_URL);
+
+  if (!hasDatabase) {
+    return c.json({
+      data: {
+        used: 0,
+        limit: -1,
+        resetAt: null,
+      },
+    });
+  }
+
   const stats = await aiService.getUsageStats(userId);
   return c.json({ data: stats });
 });

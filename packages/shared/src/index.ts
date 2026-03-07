@@ -7,3 +7,6 @@ export * from "./schemas/project.schema";
 // Types
 export * from "./types/api.types";
 export * from "./types/audio.types";
+
+// Templates
+export * from "./templates";

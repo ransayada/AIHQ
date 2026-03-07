@@ -49,9 +49,10 @@ class AudioEngine {
    * Idempotent — safe to call multiple times.
    */
   async initialize(): Promise<void> {
-    if (this._initialized) return;
+    // Always call Tone.start() — it is idempotent (only resumes if context is not already
+    // running), so it also handles re-resuming after the browser suspends the AudioContext
+    // on tab-switch or inactivity.
     await Tone.start();
-    await Tone.getContext().resume();
     this._initialized = true;
   }
 
